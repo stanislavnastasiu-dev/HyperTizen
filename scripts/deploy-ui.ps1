@@ -9,35 +9,25 @@ $packageId = '6jwjAZfoVq'
 $source = Join-Path $root 'HyperTizenUI'
 
 $stage = Join-Path ([IO.Path]::GetTempPath()) ('hypertizen-ui-' + [Guid]::NewGuid().ToString('N'))
-$content = Join-Path $stage 'content'
-New-Item -ItemType Directory -Force $content | Out-Null
+New-Item -ItemType Directory -Force $stage | Out-Null
 
 try {
-    # Only what the app needs on the TV: no tests, no build leftovers.
-    foreach ($item in 'index.html', 'main.css', 'config.xml', 'icon.png', 'js') {
-        Copy-Item (Join-Path $source $item) $content -Recurse
-    }
-
     $wgt = Join-Path $stage 'HyperTizenUI.wgt'
     if ($useTz) {
         Write-Host "==> Packaging"
-        Add-Type -AssemblyName System.IO.Compression
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        $zip = [IO.Compression.ZipFile]::Open($wgt, 'Create')
-        try {
-            foreach ($file in Get-ChildItem $content -Recurse -File) {
-                # Entry names need forward slashes to be valid inside the package.
-                $entry = $file.FullName.Substring($content.Length + 1).Replace('\', '/')
-                [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $file.FullName, $entry) | Out-Null
-            }
-        } finally {
-            $zip.Dispose()
-        }
+        & (Join-Path $PSScriptRoot 'package-ui.ps1') -Output $wgt
 
         Invoke-Step "Signing with profile '$($config.signingProfile)'" {
             & $tizen pack -t wgt -s $config.signingProfile -b $wgt
         }
     } else {
+        # Tizen Studio packages and signs a folder in one step.
+        $content = Join-Path $stage 'content'
+        New-Item -ItemType Directory -Force $content | Out-Null
+        foreach ($item in 'index.html', 'main.css', 'config.xml', 'icon.png', 'js') {
+            Copy-Item (Join-Path $source $item) $content -Recurse
+        }
+
         Invoke-Step "Packaging and signing with profile '$($config.signingProfile)'" {
             & $tizen package -t wgt -s $config.signingProfile -o $stage -- $content
         }
