@@ -27,7 +27,8 @@ $coreVersion = $project.Project.PropertyGroup |
 if ($Tag -cne "v$manifestVersion" -or $Tag -cne "v$coreVersion") {
     throw ("The tag '$Tag' does not match the source: tizen-manifest.xml has version '$manifestVersion' " +
         "and HyperTizen.Core.csproj has '$coreVersion'. A release tag is 'v' followed by that version, " +
-        "and both files must agree.")
+        "and both files must agree. Delete this tag, or the TizenBrew module, which follows the newest " +
+        "version tag, starts serving this commit's UI: git push origin :refs/tags/$Tag")
 }
 
 Write-Output $manifestVersion
