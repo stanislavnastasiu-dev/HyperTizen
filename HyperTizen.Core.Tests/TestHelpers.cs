@@ -74,6 +74,11 @@ internal sealed class FakeCapturer : IScreenCapturer
     public int LastPointCount;
     // Returns this many colors more than asked for, to stand in for a broken capturer.
     public int ExtraColors;
+    public int BatchSize { get; set; }
+    // How many points each capture was asked for, in order.
+    public ConcurrentQueue<int> PointCounts { get; } = new();
+    // Colors carry the number of the capture that produced them, to tell old colors from new ones.
+    public bool StampColors;
 
     public bool Initialize()
     {
@@ -93,10 +98,12 @@ internal sealed class FakeCapturer : IScreenCapturer
             if (Interlocked.Decrement(ref FailuresRemaining) >= 0)
                 throw new InvalidOperationException("capture failed");
 
-            Interlocked.Increment(ref Captures);
+            int capture = Interlocked.Increment(ref Captures);
             LastPointCount = points.Count;
+            PointCounts.Enqueue(points.Count);
             var colors = new Rgb10[points.Count + ExtraColors];
-            for (int i = 0; i < colors.Length; i++) colors[i] = new Rgb10(i * 64, i * 64, i * 64);
+            for (int i = 0; i < colors.Length; i++)
+                colors[i] = StampColors ? new Rgb10(capture, capture, capture) : new Rgb10(i * 64, i * 64, i * 64);
             return colors;
         }
         finally

@@ -10,6 +10,8 @@ public sealed class SimulatedCapturer : IScreenCapturer
 
     public bool Initialize() => true;
 
+    public int BatchSize => 0;
+
     public Rgb10[] Capture(IReadOnlyList<CapturePoint> points)
     {
         Thread.Sleep(33);

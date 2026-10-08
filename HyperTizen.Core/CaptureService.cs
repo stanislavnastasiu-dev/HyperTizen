@@ -267,7 +267,7 @@ namespace HyperTizen.Core
                 if (_support == SupportUnknown && !InitializeCapturer()) return new PreviewFrame(null, null, NotSupported);
 
                 CaptureLayout layout = _options.Layout;
-                return RememberFrame(CaptureFrame(layout), layout);
+                return RememberFrame(CapturePoints(layout.Points), layout);
             }
             finally
             {
@@ -294,13 +294,13 @@ namespace HyperTizen.Core
         }
 
         // The caller holds _captureLock.
-        private Rgb10[] CaptureFrame(CaptureLayout layout)
+        private Rgb10[] CapturePoints(IReadOnlyList<CapturePoint> points)
         {
-            Rgb10[] colors = _capturer.Capture(layout.Points);
+            Rgb10[] colors = _capturer.Capture(points);
             int returned = colors == null ? 0 : colors.Length;
-            if (returned != layout.Points.Length)
+            if (returned != points.Count)
                 throw new InvalidOperationException(
-                    "The capturer returned " + returned + " colors for " + layout.Points.Length + " points.");
+                    "The capturer returned " + returned + " colors for " + points.Count + " points.");
             return colors;
         }
 
@@ -343,6 +343,9 @@ namespace HyperTizen.Core
         private async Task RunAsync(CancellationToken cancellation)
         {
             int lastPriority = -1;
+            // The frame being kept up to date one batch at a time, and where its next batch starts.
+            PreviewFrame current = null;
+            int next = 0;
             while (!cancellation.IsCancellationRequested)
             {
                 try
@@ -350,6 +353,8 @@ namespace HyperTizen.Core
                     if (_paused || !_client.IsConnected)
                     {
                         // Nothing to send to yet; frames are not produced while disconnected or paused.
+                        // The colors kept from before are out of date by the time capture goes on.
+                        current = null;
                         await Task.Delay(_paused ? 50 : 100, cancellation).ConfigureAwait(false);
                         continue;
                     }
@@ -357,17 +362,35 @@ namespace HyperTizen.Core
                     var frameTime = Stopwatch.StartNew();
                     // Read once: the whole frame uses the layout it started with.
                     CaptureLayout layout = _options.Layout;
+                    // A device that measures a few points at a time waits between batches. Sending
+                    // after every batch, with the other colors as they were, updates the LEDs that
+                    // much more often than sending once all points are measured.
+                    int batch = _capturer.BatchSize;
+                    bool whole = current == null || current.Layout != layout || batch <= 0 || batch >= layout.Points.Length;
                     Rgb10[] colors;
                     await _captureLock.WaitAsync(cancellation).ConfigureAwait(false);
                     try
                     {
-                        colors = CaptureFrame(layout);
+                        if (whole)
+                        {
+                            colors = CapturePoints(layout.Points);
+                            next = 0;
+                        }
+                        else
+                        {
+                            int count = Math.Min(batch, layout.Points.Length - next);
+                            Rgb10[] measured = CapturePoints(new ArraySegment<CapturePoint>(layout.Points, next, count));
+                            // A copy: the frame a preview already holds must not change.
+                            colors = (Rgb10[])current.Colors.Clone();
+                            Array.Copy(measured, 0, colors, next, count);
+                            next = (next + count) % layout.Points.Length;
+                        }
                     }
                     finally
                     {
                         _captureLock.Release();
                     }
-                    RememberFrame(colors, layout);
+                    current = RememberFrame(colors, layout);
                     if (_paused) continue;
 
                     // A priority change leaves the last image at the old priority; remove it first.
@@ -395,6 +418,7 @@ namespace HyperTizen.Core
                 catch (Exception ex)
                 {
                     _log.Error("Capture failed", ex);
+                    current = null;
                     try
                     {
                         await Task.Delay(1000, cancellation).ConfigureAwait(false);
