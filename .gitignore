@@ -12,3 +12,4 @@ tizen_web_project.yaml
 tizen_workspace.yaml
 .tizen-rds
 HyperTizenUI/Debug
+HyperTizenUI/Release

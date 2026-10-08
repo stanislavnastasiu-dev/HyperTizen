@@ -78,3 +78,21 @@ powershell -File scripts/deploy-tv.ps1
 ```
 
 The script builds, signs, installs and starts the service, checks that port 8086 answers, then shows the TV log.
+
+### The UI on the TV
+
+End users add the UI as a TizenBrew module (see Installation). While developing you can install it directly as a TV app:
+
+```bash
+powershell -File scripts/deploy-ui.ps1
+```
+
+The script packages `HyperTizenUI`, signs it with your certificate profile, installs it and opens it on the TV. Run `scripts/deploy-tv.ps1` first so the service on the TV understands the UI.
+
+To check the UI on your PC without a TV, run the browser smoke test (Edge or Chrome required, port 8086 free):
+
+```bash
+dotnet build HyperTizen.Desktop
+node scripts/ui-smoke.js
+node --test "HyperTizenUI/tests/*.test.js"
+```
