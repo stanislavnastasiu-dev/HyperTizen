@@ -106,4 +106,49 @@ public class CaptureServiceTests
         await TestHelpers.WaitUntilAsync(() => capturer.Captures > before);
         await service.StopAsync();
     }
+
+    private static (CaptureService Service, FakeCapturer Capturer, ListLog Log) CreateWithStuckCapture(FakeHyperionServer server)
+    {
+        var log = new ListLog();
+        var client = new HyperionClient(log, new[] { TimeSpan.FromMilliseconds(50) });
+        client.SetServer(server.Uri);
+        var capturer = new FakeCapturer { Gate = new ManualResetEventSlim(false) };
+        return (new CaptureService(capturer, client, log, TimeSpan.FromMilliseconds(200)), capturer, log);
+    }
+
+    [Fact]
+    public async Task Stop_returns_and_reports_when_a_capture_never_returns()
+    {
+        using var server = new FakeHyperionServer();
+        var (service, capturer, log) = CreateWithStuckCapture(server);
+        await service.StartAsync();
+        await TestHelpers.WaitUntilAsync(() => capturer.Entered >= 1);
+
+        Task stop = service.StopAsync();
+        Task finished = await Task.WhenAny(stop, Task.Delay(5000));
+
+        Assert.Same(stop, finished);
+        Assert.False(service.IsRunning);
+        Assert.Contains(log.Errors, e => e.Contains("did not stop"));
+        capturer.Gate!.Set();
+    }
+
+    [Fact]
+    public async Task Start_is_refused_until_a_stuck_capture_has_finished()
+    {
+        using var server = new FakeHyperionServer();
+        var (service, capturer, _) = CreateWithStuckCapture(server);
+        await service.StartAsync();
+        await TestHelpers.WaitUntilAsync(() => capturer.Entered >= 1);
+        await service.StopAsync();
+
+        Assert.False(await service.StartAsync());
+        Assert.Equal(1, capturer.MaxConcurrent);
+
+        capturer.Gate!.Set();
+        await TestHelpers.WaitUntilAsync(() => service.StartAsync().GetAwaiter().GetResult());
+        await TestHelpers.WaitUntilAsync(() => capturer.Captures >= 1);
+        Assert.Equal(1, capturer.MaxConcurrent);
+        await service.StopAsync();
+    }
 }

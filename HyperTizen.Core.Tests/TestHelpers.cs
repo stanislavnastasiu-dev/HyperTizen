@@ -58,6 +58,8 @@ internal sealed class FakeCapturer : IScreenCapturer
     public int Captures;
     public int MaxConcurrent;
     public int FailuresRemaining;
+    public int Entered;
+    public ManualResetEventSlim? Gate;
 
     public bool Initialize()
     {
@@ -71,6 +73,8 @@ internal sealed class FakeCapturer : IScreenCapturer
         try
         {
             if (active > MaxConcurrent) MaxConcurrent = active;
+            Interlocked.Increment(ref Entered);
+            Gate?.Wait();
             Thread.Sleep(5);
             if (Interlocked.Decrement(ref FailuresRemaining) >= 0)
                 throw new InvalidOperationException("capture failed");

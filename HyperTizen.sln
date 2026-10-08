@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31005.135
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HyperTizen.Desktop", "HyperTizen.Desktop\HyperTizen.Desktop.csproj", "{EAD8EEA8-BE28-46F7-9CD4-D43BA3128498}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HyperTizen", "HyperTizen\HyperTizen.csproj", "{BDB94F63-7409-4D10-9165-ECDC108769F8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HyperTizen.Core", "HyperTizen.Core\HyperTizen.Core.csproj", "{2CD81D9D-1367-4036-BBDD-5E9EBA6DE703}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HyperTizen.Core.Tests", "HyperTizen.Core.Tests\HyperTizen.Core.Tests.csproj", "{E25D280A-DBA1-4A69-A023-409D8D042436}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HyperTizen.Desktop", "HyperTizen.Desktop\HyperTizen.Desktop.csproj", "{EAD8EEA8-BE28-46F7-9CD4-D43BA3128498}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -11,15 +11,18 @@ namespace HyperTizen.Core
         private readonly HyperionClient _client;
         private readonly ILog _log;
         private readonly SemaphoreSlim _transition = new SemaphoreSlim(1, 1);
+        private readonly TimeSpan _stopTimeout;
 
         private CancellationTokenSource _cancellation;
         private volatile Task _loop;
+        private Task _stuckLoop;
 
-        public CaptureService(IScreenCapturer capturer, HyperionClient client, ILog log)
+        public CaptureService(IScreenCapturer capturer, HyperionClient client, ILog log, TimeSpan? stopTimeout = null)
         {
             _capturer = capturer ?? throw new ArgumentNullException(nameof(capturer));
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _log = log ?? throw new ArgumentNullException(nameof(log));
+            _stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(3);
         }
 
         public bool IsRunning
@@ -33,6 +36,16 @@ namespace HyperTizen.Core
             try
             {
                 if (_loop != null) return true;
+
+                if (_stuckLoop != null)
+                {
+                    if (!_stuckLoop.IsCompleted)
+                    {
+                        _log.Error("Capture cannot start: the previous capture is still running");
+                        return false;
+                    }
+                    _stuckLoop = null;
+                }
 
                 bool supported;
                 try
@@ -71,14 +84,28 @@ namespace HyperTizen.Core
             {
                 if (_loop == null) return;
 
+                Task loop = _loop;
                 _cancellation.Cancel();
-                await _loop.ConfigureAwait(false);
-                _cancellation.Dispose();
+
+                // A capture or a send that never returns must not block stopping forever.
+                bool stopped = await CompletesWithinAsync(loop, _stopTimeout).ConfigureAwait(false);
+                if (stopped)
+                {
+                    await _client.SendClearAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    _log.Error("Capture loop did not stop within " + _stopTimeout.TotalSeconds + " s; closing the Hyperion connection anyway");
+                }
+
+                // Closing the connection also releases a loop that is stuck sending.
+                await _client.StopAsync().ConfigureAwait(false);
+                if (!stopped) stopped = await CompletesWithinAsync(loop, TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
+                if (stopped) _cancellation.Dispose();
+                else _stuckLoop = loop;
                 _cancellation = null;
                 _loop = null;
-
-                await _client.SendClearAsync().ConfigureAwait(false);
-                await _client.StopAsync().ConfigureAwait(false);
                 _log.Info("Capture stopped");
             }
             finally
@@ -87,6 +114,10 @@ namespace HyperTizen.Core
             }
         }
 
+        private static async Task<bool> CompletesWithinAsync(Task task, TimeSpan timeout)
+        {
+            return await Task.WhenAny(task, Task.Delay(timeout)).ConfigureAwait(false) == task;
+        }
         private async Task RunAsync(CancellationToken cancellation)
         {
             while (!cancellation.IsCancellationRequested)

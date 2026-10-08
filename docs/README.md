@@ -52,7 +52,7 @@ The solution has four projects:
 
 ## Running on your PC
 
-Open `HyperTizen.sln`, right-click `HyperTizen.Desktop`, choose **Set as Startup Project** (needed once), select the **Desktop** profile and press F5. From a terminal:
+Open `HyperTizen.sln` and press F5 with the **Desktop** profile selected; `HyperTizen.Desktop` is the default startup project. If Visual Studio remembers a different one from before, right-click `HyperTizen.Desktop` and choose **Set as Startup Project**. From a terminal:
 
 ```bash
 dotnet run --project HyperTizen.Desktop
@@ -68,9 +68,9 @@ dotnet test HyperTizen.Core.Tests
 
 ## Running on the TV
 
-1. Install Tizen Studio and create a certificate profile as described in [Resigning the package](#resigning-the-package).
+1. Install Tizen Studio or the Tizen extension for VS Code, and create a Samsung certificate profile (see [Resigning the package](#resigning-the-package)).
 2. Put the TV in developer mode with your PC's IP address.
-3. Copy `tv.local.example.json` to `tv.local.json` and set `tvIp` and `signingProfile` (and `tizenStudioPath` if Tizen Studio is not in `C:\tizen-studio`).
+3. Copy `tv.local.example.json` to `tv.local.json` and set `tvIp` and `signingProfile` (and `tizenStudioPath` if Tizen Studio is installed somewhere other than `C:\tizen-studio`). The script uses Tizen Studio's `tizen` CLI when it finds it, otherwise the extension's `tz` CLI.
 4. Select the **TV** profile and press F5, or run:
 
 ```bash

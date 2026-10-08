@@ -7,3 +7,8 @@ bin
 .sign
 *.wgt
 tv.local.json
+tizen_dotnet_project.yaml
+tizen_web_project.yaml
+tizen_workspace.yaml
+.tizen-rds
+HyperTizenUI/Debug

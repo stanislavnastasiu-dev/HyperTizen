@@ -22,11 +22,18 @@ if (-not $config.signingProfile) { throw "tv.local.json: 'signingProfile' is not
 $studio = 'C:\tizen-studio'
 if ($config.tizenStudioPath) { $studio = $config.tizenStudioPath }
 
-function Find-Tool([string]$name, [string]$fallback) {
-    $command = Get-Command $name -ErrorAction SilentlyContinue
-    if ($command) { return $command.Source }
-    if (Test-Path $fallback) { return $fallback }
-    throw "'$name' was not found on PATH or at $fallback. Install Tizen Studio or set tizenStudioPath in tv.local.json."
+# Tools installed by the Tizen extension for VS Code, used when Tizen Studio is absent.
+$extensionTools = Join-Path $env:USERPROFILE '.tizen-extension-platform\server\sdktools\data\tools'
+
+function Find-Tool([string[]]$names, [string[]]$fallbacks) {
+    foreach ($name in $names) {
+        $command = Get-Command $name -ErrorAction SilentlyContinue
+        if ($command) { return $command.Source }
+    }
+    foreach ($fallback in $fallbacks) {
+        if (Test-Path $fallback) { return $fallback }
+    }
+    throw "'$($names -join "' / '")' was not found on PATH or at: $($fallbacks -join '; '). Install Tizen Studio or the Tizen extension for VS Code, or set tizenStudioPath in tv.local.json."
 }
 
 function Invoke-Step([string]$description, [scriptblock]$action) {
@@ -35,8 +42,10 @@ function Invoke-Step([string]$description, [scriptblock]$action) {
     if ($LASTEXITCODE -ne 0) { throw "$description failed with exit code $LASTEXITCODE." }
 }
 
-$sdb = Find-Tool 'sdb' (Join-Path $studio 'tools\sdb.exe')
-$tizen = Find-Tool 'tizen' (Join-Path $studio 'tools\ide\bin\tizen.bat')
+$sdb = Find-Tool @('sdb') @((Join-Path $studio 'tools\sdb.exe'), (Join-Path $extensionTools 'sdb.exe'))
+$tizen = Find-Tool @('tizen', 'tz') @((Join-Path $studio 'tools\ide\bin\tizen.bat'), (Join-Path $extensionTools 'tizen-core\tz.exe'))
+# Tizen Studio ships the `tizen` CLI; the VS Code extension ships `tz`, which takes different arguments.
+$useTz = [IO.Path]::GetFileNameWithoutExtension($tizen) -eq 'tz'
 $target = "$($config.tvIp):26101"
 
 Invoke-Step "Building ($Configuration)" {
@@ -49,7 +58,8 @@ $tpk = Get-ChildItem (Join-Path $root "HyperTizen\bin\$Configuration\tizen90\*.t
 if (-not $tpk) { throw "No .tpk found in HyperTizen\bin\$Configuration\tizen90." }
 
 Invoke-Step "Signing $($tpk.Name) with profile '$($config.signingProfile)'" {
-    & $tizen package -t tpk -s $config.signingProfile -- $tpk.FullName
+    if ($useTz) { & $tizen pack -t tpk -s $config.signingProfile -b $tpk.FullName }
+    else { & $tizen package -t tpk -s $config.signingProfile -- $tpk.FullName }
 }
 
 Invoke-Step "Connecting to $target" {
@@ -57,11 +67,13 @@ Invoke-Step "Connecting to $target" {
 }
 
 Invoke-Step "Installing on the TV" {
-    & $tizen install -n $tpk.Name -s $target -- $tpk.DirectoryName
+    if ($useTz) { & $tizen install -p $tpk.FullName -e $target }
+    else { & $tizen install -n $tpk.Name -s $target -- $tpk.DirectoryName }
 }
 
 Invoke-Step "Starting the service" {
-    & $tizen run -p $packageId -s $target
+    if ($useTz) { & $tizen run -p $packageId -e $target }
+    else { & $tizen run -p $packageId -s $target }
 }
 
 Write-Host "==> Waiting for the control server on $($config.tvIp):8086"
