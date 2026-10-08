@@ -68,6 +68,19 @@ public class HyperTizenServiceStatusTests
     }
 
     [Fact]
+    public async Task Status_carries_what_the_capturer_reports_about_itself()
+    {
+        using var fixture = new Fixture();
+        await fixture.Service.StartAsync();
+        using var ui = await fixture.ConnectAsync();
+
+        Assert.Equal(JTokenType.Null, (await StatusAsync(ui))["captureDetails"]!.Type);
+
+        fixture.Capturer.Diagnostics = "points=2 sleep=20";
+        Assert.Equal("points=2 sleep=20", (string?)(await StatusAsync(ui))["captureDetails"]);
+    }
+
+    [Fact]
     public async Task Status_while_capturing()
     {
         using var fixture = new Fixture();

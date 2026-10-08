@@ -95,6 +95,8 @@ namespace HyperTizen.Core
         public int? frameMs { get; set; }
         // Frames sent per second over the last few seconds.
         public double fps { get; set; }
+        // What the capturer reports about the device and its latest capture; null when nothing.
+        public string captureDetails { get; set; }
     }
 
     public class TestLedsResultEvent : BasicEvent

@@ -27,6 +27,10 @@ namespace HyperTizen.Core
         // it takes any number at once.
         int BatchSize { get; }
 
+        // What the device says about itself and how long its latest capture took, for the status
+        // reply. Null when there is nothing to tell.
+        string Diagnostics { get; }
+
         // One color per point, in the same order. Blocks for as long as the device needs.
         Rgb10[] Capture(IReadOnlyList<CapturePoint> points);
     }

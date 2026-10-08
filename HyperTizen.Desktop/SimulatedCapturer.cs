@@ -12,6 +12,8 @@ public sealed class SimulatedCapturer : IScreenCapturer
 
     public int BatchSize => 0;
 
+    public string? Diagnostics => null;
+
     public Rgb10[] Capture(IReadOnlyList<CapturePoint> points)
     {
         Thread.Sleep(33);

@@ -21,6 +21,7 @@ namespace HyperTizen.Core
         private static readonly TimeSpan PreviewTimeout = TimeSpan.FromSeconds(3);
         private static readonly string Version = ReadVersion();
 
+        private readonly IScreenCapturer _capturer;
         private readonly ISettingsStore _settings;
         private readonly ILog _log;
         private readonly LastErrorLog _errors;
@@ -33,6 +34,7 @@ namespace HyperTizen.Core
 
         public HyperTizenService(string listenPrefix, IScreenCapturer capturer, ISettingsStore settings, ILog log, string staticRoot = null)
         {
+            _capturer = capturer ?? throw new ArgumentNullException(nameof(capturer));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _log = log ?? throw new ArgumentNullException(nameof(log));
             // Errors from the Hyperion link and the capture loop are what status reports as lastError.
@@ -160,7 +162,8 @@ namespace HyperTizen.Core
                 capture = _capture.State,
                 lastError = _errors.LastError,
                 frameMs = _capture.FrameMs,
-                fps = _capture.Fps
+                fps = _capture.Fps,
+                captureDetails = _capturer.Diagnostics
             };
         }
 
