@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
 using HyperTizen.Core;
@@ -39,6 +41,7 @@ namespace HyperTizen
         private Api _api;
         private Condition _condition;
         private bool _notified;
+        private volatile string _lastCapture = "";
 
         [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "cs_ve_get_rgb_measure_condition")]
         private static extern int ConditionCs(out Condition condition);
@@ -131,9 +134,28 @@ namespace HyperTizen
             get { return _condition.ScreenCapturePoints; }
         }
 
+        public string Diagnostics
+        {
+            get
+            {
+                if (_api == null) return null;
+                return _api.Name + ": points=" + _condition.ScreenCapturePoints
+                    + " sleep=" + _condition.SleepMS
+                    + " size=" + _condition.Width + "x" + _condition.Height
+                    + " density=" + _condition.PixelDensityX + "x" + _condition.PixelDensityY
+                    + _lastCapture;
+            }
+        }
+
         public Rgb10[] Capture(IReadOnlyList<CapturePoint> points)
         {
             Rgb10[] colorData = new Rgb10[points.Count];
+            // Where the time of this capture goes, for Diagnostics.
+            var clock = Stopwatch.StartNew();
+            long positionTicks = 0;
+            long waitTicks = 0;
+            long readTicks = 0;
+            int reads = 0;
 
             // The TV measures a few points at a time: set their positions, wait, then read them back.
             int i = 0;
@@ -142,6 +164,7 @@ namespace HyperTizen
                 if (_condition.ScreenCapturePoints <= 0) break;
 
                 int batch = Math.Min(_condition.ScreenCapturePoints, points.Count - i);
+                long started = clock.ElapsedTicks;
                 for (int j = 0; j < batch; j++)
                 {
                     int x = CaptureGeometry.Origin(points[i + j].X, _condition.Width, _condition.PixelDensityX);
@@ -151,10 +174,13 @@ namespace HyperTizen
                     if (res < 0) throw new InvalidOperationException("Setting capture point " + (i + j) + " failed with " + res + ".");
                 }
 
+                long positioned = clock.ElapsedTicks;
+
                 if (_condition.SleepMS > 0)
                 {
                     Thread.Sleep(_condition.SleepMS);
                 }
+                long waited = clock.ElapsedTicks;
 
                 for (int k = 0; k < batch; k++)
                 {
@@ -164,6 +190,7 @@ namespace HyperTizen
                     for (int attempt = 0; attempt < MaxPixelReadAttempts && !valid; attempt++)
                     {
                         res = _api.Pixel(k, out color);
+                        reads++;
                         valid = res >= 0 && color.R <= 1023 && color.G <= 1023 && color.B <= 1023;
                     }
 
@@ -174,9 +201,20 @@ namespace HyperTizen
                     colorData[i + k] = new Rgb10(color.R, color.G, color.B);
                 }
 
+                positionTicks += positioned - started;
+                waitTicks += waited - positioned;
+                readTicks += clock.ElapsedTicks - waited;
                 i += batch;
             }
+
+            _lastCapture = "; last capture of " + points.Count + " points: position " + Milliseconds(positionTicks)
+                + " ms, wait " + Milliseconds(waitTicks) + " ms, read " + Milliseconds(readTicks) + " ms in " + reads + " reads";
             return colorData;
+        }
+
+        private static string Milliseconds(long ticks)
+        {
+            return (ticks * 1000.0 / Stopwatch.Frequency).ToString("0.0", CultureInfo.InvariantCulture);
         }
 
         // Newer TVs write four values here, older ones three. The struct must hold four either way:
