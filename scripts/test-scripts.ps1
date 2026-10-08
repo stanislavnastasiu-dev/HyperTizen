@@ -157,3 +157,5 @@ if ($failures -gt 0) {
     exit 1
 }
 Write-Host 'All checks passed.'
+# A check above runs a command that fails on purpose; do not hand its exit code on.
+exit 0
