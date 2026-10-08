@@ -169,8 +169,8 @@ public class HyperTizenServiceStatusTests
         Assert.True((bool)result["ok"]!);
         var colors = result["colors"]!.ToObject<int[][]>()!;
         Assert.Equal(14, colors.Length);
-        // The fake capturer's last point is 960 on the 10-bit scale.
-        Assert.Equal(new[] { 240, 240, 240 }, colors[15]);
+        // The fake capturer's last point is 832 on the 10-bit scale.
+        Assert.Equal(new[] { 208, 208, 208 }, colors[13]);
         Assert.All(colors, c => Assert.All(c, channel => Assert.InRange(channel, 0, 255)));
     }
 
@@ -222,7 +222,7 @@ public class HyperTizenServiceStatusTests
     }
 
     [Theory]
-    [InlineData("maxFps", "15")]
+    [InlineData("maxFps", "61")]
     [InlineData("maxFps", "-10")]
     [InlineData("maxFps", "")]
     [InlineData("priority", "0")]
