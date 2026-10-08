@@ -6,34 +6,37 @@ HyperTizen is a Hyperion / HyperHDR capturer for Tizen TVs.
 
 To install HyperTizen, you need to have a Samsung TV (Tizen) that has at least Tizen 6.5 (2022+).
 
-> The release and the TizenBrew module named in the steps below belong to the original project, [reisxd/HyperTizen](https://github.com/reisxd/HyperTizen). They do not include what this fork adds (the setup screens, Preview and Settings). This fork has no release of its own yet: to get its version, build and install it from this repository as described under [Running on the TV](#running-on-the-tv).
-
 You'll need Tizen Studio to install the app on your TV. You can download it from the [official website](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html).
 
-1. Download the latest release from the [releases page](https://github.com/reisxd/HyperTizen/releases/latest).
+A Samsung TV only accepts packages signed with a Samsung certificate that lists that TV. So the files in a release cannot be installed as they are: you sign them with your own certificate first.
+
+1. Download `io.gh.reisxd.HyperTizen-<version>.tpk` from the [releases page](https://github.com/stanislavnastasiu-dev/HyperTizen/releases/latest).
 
 2. Change the Host PC IP address to your PC's IP address by following [this](https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/tv-device.html#Connecting-the-TV-and-SDK)
 
-3. Install the package:
+3. Create a certificate profile that includes your TV. You can follow [this guide](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/creating-certificates.html).
+
+4. Sign the package with your profile (see [Resigning the package](#resigning-the-package)).
+
+5. Install the package:
 ```bash
 tizen install -n path/to/io.gh.reisxd.HyperTizen.tpk
 ```
 
 Note that `tizen` is in `C:\tizen-studio\tools\ide\bin` on Windows and in `~/tizen-studio/tools/ide/bin` on Linux.
 
-If you get `install failed[118, -12], reason: Check certificate error` error, you'll have to resign the package.
+If you get `install failed[118, -12], reason: Check certificate error` error, the package is not signed with a certificate that lists your TV.
 
-4. Install TizenBrew to your TV. Follow [this](https://github.com/reisxd/TizenBrew/blob/main/docs/README.md) guide.
+6. Add the UI, in one of two ways:
 
-5. Add `reisxd/HyperTizen/HyperTizenUI` as a GitHub module to the module manager. You can access the module manager by pressing the [GREEN] button on the remote.
+   - **As a TizenBrew module.** Install TizenBrew to your TV by following [this](https://github.com/reisxd/TizenBrew/blob/main/docs/README.md) guide, then add `stanislavnastasiu-dev/HyperTizen/HyperTizenUI` as a GitHub module to the module manager. You can access the module manager by pressing the [GREEN] button on the remote.
+   - **As a TV app.** Download `HyperTizenUI-<version>.wgt` from the same release, then sign and install it like the service (see below).
+
+The release of the original project, [reisxd/HyperTizen](https://github.com/reisxd/HyperTizen/releases), does not include what this fork adds (the setup screens, Preview and Settings). The same goes for the HyperTizen entry in [Tizen Community Packages](https://github.com/Apps2Samsung/tizen-community-packages), a community catalogue of TV apps: it is the original project's release.
 
 ## Resigning the package
 
-1. Change the Host PC IP address to your PC's IP address by following [this](https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/tv-device.html#Connecting-the-TV-and-SDK)
-
-2. After following the guide for the Tizen Studio installation, you have to create a certificate profile. You can follow [this guide](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/creating-certificates.html).
-
-3. Sign the package:
+Sign the service package:
 ```bash
 tizen package -t tpk -s YourProfileName -o path/to/output/dir -- path/to/io.gh.reisxd.HyperTizen.tpk
 
@@ -41,7 +44,11 @@ tizen package -t tpk -s YourProfileName -o path/to/output/dir -- path/to/io.gh.r
 # tizen package -t tpk -s HyperTizen -o release -- io.gh.reisxd.HyperTizen.tpk
 ```
 
-4. You should now be able to install the package.
+Sign and install the UI package, if you are not using the TizenBrew module:
+```bash
+tizen package -t wgt -s YourProfileName -o path/to/output/dir -- path/to/HyperTizenUI.wgt
+tizen install -n path/to/output/dir/HyperTizenUI.wgt
+```
 
 # Development
 
