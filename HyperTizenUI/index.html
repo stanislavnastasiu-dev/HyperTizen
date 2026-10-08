@@ -3,79 +3,177 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1920, height=1080">
     <title>HyperTizen</title>
     <link rel="stylesheet" href="main.css">
-    <script src="js/wsClient.js"></script>
-    <script type="text/javascript" src="$WEBAPIS/webapis/webapis.js"></script>
 </head>
 
 <body>
-    <div class="content">
+    <header class="topbar">
         <h1>HyperTizen</h1>
-        <h3 id="status">Status</h3>
-        <a><input type="checkbox" id="enabled"> Enabled</a>
-        <h2 id="ssdpDeviceTitle">SSDP Devices</h2>
-        <div id="ssdpItems"></div>
-    </div>
+    </header>
+
+    <main>
+        <section id="screen-connecting" class="screen centered" hidden>
+            <h2 id="connecting-title">Starting HyperTizen...</h2>
+            <div id="connecting-help" class="stack" hidden>
+                <p id="connecting-message">The HyperTizen service is not responding.</p>
+                <ul id="connecting-tips">
+                    <li>Check that the HyperTizen service app is installed on the TV.</li>
+                    <li>Restart the TV after installing it.</li>
+                </ul>
+                <button id="connecting-retry" class="focusable primary">Retry</button>
+            </div>
+        </section>
+
+        <section id="screen-setup-server" class="screen" hidden>
+            <p id="server-step" class="step">Step 1 of 3</p>
+            <h2>Choose your Hyperion or HyperHDR server</h2>
+            <p id="server-hint" class="hint">Searching your network...</p>
+            <div id="server-list" class="list"></div>
+            <div class="row">
+                <button id="server-manual" class="focusable">Enter address manually</button>
+                <button id="server-rescan" class="focusable">Scan again</button>
+            </div>
+        </section>
+
+        <section id="screen-keypad" class="screen" hidden>
+            <h2>Enter the server address</h2>
+            <div class="keypad-layout">
+                <div class="fields">
+                    <div id="field-ip" class="field">
+                        <span class="field-name">IP address</span>
+                        <span id="value-ip" class="field-value"></span>
+                    </div>
+                    <div id="field-port" class="field">
+                        <span class="field-name">Port</span>
+                        <span id="value-port" class="field-value"></span>
+                    </div>
+                    <p class="hint">This is the address of the computer running Hyperion or HyperHDR. The usual port is 8090.</p>
+                </div>
+                <div>
+                    <div id="keypad" class="keypad"></div>
+                    <div class="row">
+                        <button id="keypad-next" class="focusable">Next field</button>
+                        <button id="keypad-connect" class="focusable primary" disabled>Connect</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="screen-setup-test" class="screen" hidden>
+            <p id="test-step" class="step">Step 2 of 3</p>
+            <h2 id="test-title"></h2>
+            <p id="test-detail" class="hint"></p>
+            <ul id="test-tips" hidden>
+                <li>Check that Hyperion or HyperHDR is running.</li>
+                <li>Check that LED output is enabled there.</li>
+                <li>Check that the address is the Hyperion computer's, not the TV's.</li>
+            </ul>
+            <div id="test-question" class="row" hidden>
+                <button id="test-yes" class="focusable primary">Yes</button>
+                <button id="test-no" class="focusable">No</button>
+            </div>
+            <div id="test-retry" class="row" hidden>
+                <button id="test-again" class="focusable primary">Try again</button>
+                <button id="test-other" class="focusable">Choose another server</button>
+            </div>
+        </section>
+
+        <section id="screen-setup-enable" class="screen" hidden>
+            <p class="step">Step 3 of 3</p>
+            <h2>You're set. Turn on ambient lighting?</h2>
+            <div class="row">
+                <button id="enable-on" class="focusable primary">Turn on</button>
+                <button id="enable-later" class="focusable">Not now</button>
+            </div>
+        </section>
+
+        <section id="screen-home" class="screen" hidden>
+            <div class="tiles">
+                <div class="tile">
+                    <span class="tile-name">Service</span>
+                    <span id="tile-service" class="tile-value good">Running</span>
+                    <span id="tile-version" class="tile-detail"></span>
+                </div>
+                <div class="tile">
+                    <span class="tile-name">Server</span>
+                    <span id="tile-connection" class="tile-value"></span>
+                    <span id="tile-server" class="tile-detail"></span>
+                </div>
+                <div class="tile">
+                    <span class="tile-name">Capture</span>
+                    <span id="tile-capture" class="tile-value"></span>
+                    <span class="tile-detail">&nbsp;</span>
+                </div>
+            </div>
+            <p id="home-error" class="error" hidden></p>
+            <button id="home-toggle" class="focusable toggle">
+                <span>Ambient lighting</span>
+                <span id="home-toggle-state">Off</span>
+            </button>
+            <div class="row">
+                <button id="home-test" class="focusable">Test LEDs</button>
+                <button id="home-preview" class="focusable">Preview</button>
+                <button id="home-server" class="focusable">Change server</button>
+                <button id="home-settings" class="focusable">Settings</button>
+            </div>
+            <p id="home-message" class="hint"></p>
+        </section>
+
+        <section id="screen-preview" class="screen" hidden>
+            <h2>What the TV is capturing</h2>
+            <div id="preview-frame" class="preview"></div>
+            <p id="preview-message" class="hint"></p>
+            <p class="hint">Press Back to return.</p>
+        </section>
+
+        <section id="screen-settings" class="screen" hidden>
+            <h2>Settings</h2>
+            <div class="setting">
+                <span class="setting-name">Frame rate limit</span>
+                <div id="fps-options" class="row">
+                    <button id="fps-0" class="focusable option" data-fps="0">Unlimited</button>
+                    <button id="fps-30" class="focusable option" data-fps="30">30</button>
+                    <button id="fps-20" class="focusable option" data-fps="20">20</button>
+                    <button id="fps-10" class="focusable option" data-fps="10">10</button>
+                </div>
+            </div>
+            <div class="setting">
+                <span class="setting-name">Priority</span>
+                <div class="row">
+                    <button id="priority-down" class="focusable option">-</button>
+                    <span id="priority-value" class="stepper-value">99</span>
+                    <button id="priority-up" class="focusable option">+</button>
+                </div>
+            </div>
+            <div class="setting">
+                <span class="setting-name">Server</span>
+                <div class="row">
+                    <button id="forget-server" class="focusable">Forget server</button>
+                    <div id="forget-confirm" class="row" hidden>
+                        <span id="forget-text"></span>
+                        <button id="forget-yes" class="focusable danger">Forget</button>
+                        <button id="forget-no" class="focusable">Cancel</button>
+                    </div>
+                </div>
+            </div>
+            <p id="about" class="hint"></p>
+        </section>
+    </main>
+
+    <script src="js/address.js"></script>
+    <script src="js/focus.js"></script>
+    <script src="js/protocol.js"></script>
+    <script src="js/router.js"></script>
+    <script src="js/connection.js"></script>
+    <script src="js/screens/connecting.js"></script>
+    <script src="js/screens/setup.js"></script>
+    <script src="js/screens/keypad.js"></script>
+    <script src="js/screens/home.js"></script>
+    <script src="js/screens/preview.js"></script>
+    <script src="js/screens/settings.js"></script>
+    <script src="js/app.js"></script>
 </body>
-
-<script>
-    window.onload = function () {
-        let elements = document.querySelectorAll('button, input, [tabindex]');
-        let elementsArray = Array.prototype.slice.call(elements);
-        let focusedElement = document.activeElement;
-        let focusedIndex = elementsArray.indexOf(focusedElement);
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (focusedIndex < elementsArray.length - 1) {
-                    elementsArray[focusedIndex + 1].focus();
-                    focusedIndex++;
-                }
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (focusedIndex > 0) {
-                    elementsArray[focusedIndex - 1].focus();
-                    focusedIndex--;
-                }
-            } else if (e.key == 'Enter') {
-                e.preventDefault();
-                const element = elementsArray[focusedIndex];
-                element.click();
-                if (element.classList.contains('ssdpItem')) {
-                    const uri = element.getAttribute('data-uri');
-                    setRPC(uri);
-                }
-            }
-        });
-
-        const observer = new MutationObserver(function (mutations) {
-            mutations.forEach(function (mutation) {
-                if (mutation.addedNodes.length > 0) {
-                    elements = document.querySelectorAll('button, input, [tabindex]');
-                    elementsArray = Array.prototype.slice.call(elements);
-                    focusedIndex = elementsArray.indexOf(document.activeElement);
-                }
-            });
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-        fetch('http://127.0.0.1:8081').then(res => res.text()).then(ip => {
-            deviceIP = ip;
-
-            const testWS = new WebSocket(`ws://${ip}:8086`);
-
-            testWS.onopen = function () {
-                testWS.close();
-                open();
-            };
-            testWS.onerror = function () {
-                location.reload();
-            };
-        });
-    };
-</script>
 
 </html>

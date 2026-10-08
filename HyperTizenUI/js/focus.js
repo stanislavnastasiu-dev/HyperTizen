@@ -31,6 +31,15 @@
         : (direction === 'down' ? to.y - from.y : from.y - to.y);
       if (primary <= 1) return;
 
+      // The whole candidate must lie past the current element's edge, not just its centre:
+      // a wide element in another row is not "to the right" of something beneath it.
+      const a = current.rect;
+      const b = candidate.rect;
+      const clearance = horizontal
+        ? (direction === 'right' ? b.left - (a.left + a.width) : a.left - (b.left + b.width))
+        : (direction === 'down' ? b.top - (a.top + a.height) : a.top - (b.top + b.height));
+      if (clearance < -1) return;
+
       const cross = horizontal
         ? gap(current.rect.top, current.rect.height, candidate.rect.top, candidate.rect.height)
         : gap(current.rect.left, current.rect.width, candidate.rect.left, candidate.rect.width);

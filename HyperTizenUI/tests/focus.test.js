@@ -42,6 +42,17 @@ test('prefers an aligned element over a nearer diagonal one', () => {
   assert.equal(focus.pickNext(current, [current, diagonal, aligned], 'right'), aligned);
 });
 
+test('does not jump to a wide element in another row whose centre lies further along', () => {
+  const wide = item('wide', 0, 0, 1100, 80);
+  const current = item('current', 300, 100, 200, 50);
+  const nextInRow = item('nextInRow', 550, 100, 300, 50);
+  const all = [wide, current, nextInRow];
+
+  assert.equal(focus.pickNext(current, all, 'right'), nextInRow);
+  assert.equal(focus.pickNext(nextInRow, all, 'left'), current);
+  assert.equal(focus.pickNext(nextInRow, all, 'right'), null);
+});
+
 test('walks a keypad grid', () => {
   const keys = [];
   for (let row = 0; row < 4; row++) {
