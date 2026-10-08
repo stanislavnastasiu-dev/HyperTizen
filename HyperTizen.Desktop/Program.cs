@@ -5,16 +5,23 @@ using HyperTizen.Desktop;
 const string ListenPrefix = "http://127.0.0.1:8086/";
 
 var log = new ConsoleLog();
-string settingsPath = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-    "HyperTizen",
-    "settings.json");
+
+// HYPERTIZEN_SETTINGS lets tests run against a throwaway settings file.
+string settingsPath = Environment.GetEnvironmentVariable("HYPERTIZEN_SETTINGS") is { Length: > 0 } overridePath
+    ? overridePath
+    : Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "HyperTizen",
+        "settings.json");
+
+string? uiFolder = UiFolder.Find(AppContext.BaseDirectory);
 
 var service = new HyperTizenService(
     ListenPrefix,
     new SimulatedCapturer(),
     new JsonFileSettingsStore(settingsPath),
-    log);
+    log,
+    uiFolder);
 
 using var stop = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) =>
@@ -35,6 +42,9 @@ catch (HttpListenerException ex)
 
 log.Info("HyperTizen desktop host running with simulated capture.");
 log.Info("Settings file: " + settingsPath);
+log.Info(uiFolder != null
+    ? "UI: open " + ListenPrefix + " in a browser (served from " + uiFolder + ")"
+    : "UI folder not found; only the control server is available.");
 log.Info("Press Ctrl+C to stop.");
 
 try

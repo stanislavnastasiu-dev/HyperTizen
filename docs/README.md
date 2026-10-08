@@ -58,7 +58,7 @@ Open `HyperTizen.sln` and press F5 with the **Desktop** profile selected; `Hyper
 dotnet run --project HyperTizen.Desktop
 ```
 
-The control server listens on `ws://127.0.0.1:8086`. Colors are a simulated rainbow; everything else, including the connection to Hyperion / HyperHDR, is real. Settings are stored in `%LOCALAPPDATA%\HyperTizen\settings.json`.
+The control server listens on `ws://127.0.0.1:8086`, and the same address serves the TV UI: open `http://127.0.0.1:8086/` in a browser and use the arrow keys, Enter and Escape in place of the remote. Colors are a simulated rainbow; everything else, including the connection to Hyperion / HyperHDR, is real. Settings are stored in `%LOCALAPPDATA%\HyperTizen\settings.json`, or in the file named by the `HYPERTIZEN_SETTINGS` environment variable.
 
 Run the tests with:
 
