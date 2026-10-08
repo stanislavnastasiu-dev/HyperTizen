@@ -1,17 +1,18 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<manifest package="io.gh.reisxd.HyperTizen" version="1.0.0" api-version="6.5" xmlns="http://tizen.org/ns/packages">
-    <author>Reis Can</author>
+﻿<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<manifest xmlns="http://tizen.org/ns/packages" package="io.gh.reisxd.HyperTizen" version="1.1.0"
+    api-version="6.5">
     <profile name="tv" />
-    <service-application appid="io.gh.reisxd.HyperTizen" exec="HyperTizen.dll" multiple="false" nodisplay="true" taskmanage="false" api-version="9" type="dotnet">
+    <service-application appid="io.gh.reisxd.HyperTizen" exec="HyperTizen.dll" nodisplay="true"
+        taskmanage="false" multiple="false" api-version="9" type="dotnet">
         <label>HyperTizen Service</label>
-        <icon>HyperTizen.png</icon>
+        <icon>HyperTizenService.png</icon>
         <splash-screens />
     </service-application>
-    <shortcut-list />
     <privileges>
         <privilege>http://tizen.org/privilege/notification</privilege>
         <privilege>http://tizen.org/privilege/internet</privilege>
     </privileges>
+    <shortcut-list />
     <dependencies />
     <provides-appdefined-privileges />
 </manifest>

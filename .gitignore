@@ -14,3 +14,5 @@ tizen_workspace.yaml
 HyperTizenUI/Debug
 HyperTizenUI/Release
 homey.local.json
+*.csproj.backup
+docs/superpowers/

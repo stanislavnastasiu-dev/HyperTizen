@@ -6,6 +6,8 @@ HyperTizen is a Hyperion / HyperHDR capturer for Tizen TVs.
 
 To install HyperTizen, you need to have a Samsung TV (Tizen) that has at least Tizen 6.5 (2022+).
 
+> The release and the TizenBrew module named in the steps below belong to the original project, [reisxd/HyperTizen](https://github.com/reisxd/HyperTizen). They do not include what this fork adds (the setup screens, Preview and Settings). This fork has no release of its own yet: to get its version, build and install it from this repository as described under [Running on the TV](#running-on-the-tv).
+
 You'll need Tizen Studio to install the app on your TV. You can download it from the [official website](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html).
 
 1. Download the latest release from the [releases page](https://github.com/reisxd/HyperTizen/releases/latest).
@@ -43,16 +45,21 @@ tizen package -t tpk -s YourProfileName -o path/to/output/dir -- path/to/io.gh.r
 
 # Development
 
-The solution has four projects:
+There are four projects:
 
 - `HyperTizen.Core`: the service logic (control server, Hyperion client, capture loop, image encoding).
 - `HyperTizen`: the TV service. It only runs on a TV.
 - `HyperTizen.Desktop`: runs the same logic on your PC with simulated screen colors.
 - `HyperTizen.Core.Tests`: tests for the core library.
 
+and two solutions:
+
+- `HyperTizen.sln`: only what goes on the TV (`HyperTizen` and `HyperTizen.Core`). The Tizen extension for VS Code builds the first solution it finds in the folder, with its own .NET SDK, which is older than the one the desktop host and the tests need. Keep this solution free of them, and keep it first by name.
+- `HyperTizenDesktop.sln`: all four projects, for working on your PC.
+
 ## Running on your PC
 
-Open `HyperTizen.sln` and press F5 with the **Desktop** profile selected; `HyperTizen.Desktop` is the default startup project. If Visual Studio remembers a different one from before, right-click `HyperTizen.Desktop` and choose **Set as Startup Project**. From a terminal:
+Open `HyperTizenDesktop.sln` and press F5 with the **Desktop** profile selected; `HyperTizen.Desktop` is the default startup project. If Visual Studio remembers a different one from before, right-click `HyperTizen.Desktop` and choose **Set as Startup Project**. From a terminal:
 
 ```bash
 dotnet run --project HyperTizen.Desktop
