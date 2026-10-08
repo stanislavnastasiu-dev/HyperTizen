@@ -9,7 +9,7 @@ namespace HyperTizen.Core.Tests;
 internal sealed class FakeHyperionServer : IDisposable
 {
     private readonly HttpListener _listener = new();
-    private readonly ConcurrentDictionary<WebSocket, byte> _sockets = new();
+    private readonly ConcurrentDictionary<WebSocket, HttpListenerContext> _sockets = new();
     private int _connectionCount;
 
     public FakeHyperionServer()
@@ -27,7 +27,12 @@ internal sealed class FakeHyperionServer : IDisposable
 
     public void DropConnections()
     {
-        foreach (var socket in _sockets.Keys) socket.Abort();
+        foreach (var connection in _sockets)
+        {
+            connection.Key.Abort();
+            // On Linux aborting the WebSocket alone leaves the connection open, so the client never notices.
+            connection.Value.Response.Abort();
+        }
     }
 
     public void Dispose()
@@ -41,9 +46,10 @@ internal sealed class FakeHyperionServer : IDisposable
         while (true)
         {
             WebSocket socket;
+            HttpListenerContext context;
             try
             {
-                var context = await _listener.GetContextAsync();
+                context = await _listener.GetContextAsync();
                 socket = (await context.AcceptWebSocketAsync(null)).WebSocket;
             }
             catch
@@ -51,7 +57,7 @@ internal sealed class FakeHyperionServer : IDisposable
                 return;
             }
 
-            _sockets[socket] = 0;
+            _sockets[socket] = context;
             Interlocked.Increment(ref _connectionCount);
             _ = ReceiveAsync(socket);
         }
