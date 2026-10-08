@@ -12,8 +12,9 @@
     return /^\d{1,5}$/.test(String(text)) && Number(text) >= 1 && Number(text) <= 65535;
   }
 
+  // Leading zeros are dropped: "010" would otherwise be read as octal by the service.
   function toWsUrl(ip, port) {
-    return 'ws://' + ip + ':' + port;
+    return 'ws://' + String(ip).split('.').map(Number).join('.') + ':' + Number(port);
   }
 
   // Discovery reports http(s) addresses; the service connects over ws(s).

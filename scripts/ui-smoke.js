@@ -184,6 +184,11 @@ async function main() {
   expect('manual entry is focused', await focused(), 'server-manual');
   await shot('1-setup-server');
 
+  // A key held down repeats; only the first press may act, or it would also press the next screen's button.
+  await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, autoRepeat: true });
+  await sleep(200);
+  expect('a repeated Enter does nothing', await currentScreen(), 'screen-setup-server');
+
   // Manual address with the keypad.
   await press('Enter');
   await waitFor('Enter opens the keypad', onScreen('keypad'));

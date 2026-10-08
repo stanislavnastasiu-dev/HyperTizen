@@ -30,8 +30,11 @@ namespace HyperTizen.Core
         private CancellationTokenSource _attempt;
         private volatile Task _loop;
 
-        public HyperionClient(ILog log, TimeSpan[] backoff = null)
+        private readonly Action _onConnected;
+
+        public HyperionClient(ILog log, TimeSpan[] backoff = null, Action onConnected = null)
         {
+            _onConnected = onConnected;
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _backoff = backoff != null && backoff.Length > 0 ? backoff : DefaultBackoff;
         }
@@ -186,6 +189,7 @@ namespace HyperTizen.Core
                         _socket = socket;
                         failures = 0;
                         _log.Info("Connected to " + uri);
+                        _onConnected?.Invoke();
                         try
                         {
                             await DrainAsync(socket, attempt.Token).ConfigureAwait(false);

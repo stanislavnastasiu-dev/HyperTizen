@@ -45,6 +45,22 @@ public class HyperionClientCommandTests
     }
 
     [Fact]
+    public async Task Reports_each_established_connection()
+    {
+        using var server = new FakeHyperionServer();
+        int connected = 0;
+        var client = new HyperionClient(new ListLog(), new[] { TimeSpan.FromMilliseconds(50) }, () => Interlocked.Increment(ref connected));
+        client.SetServer(server.Uri);
+        client.Start();
+        await TestHelpers.WaitUntilAsync(() => connected == 1);
+
+        server.DropConnections();
+
+        await TestHelpers.WaitUntilAsync(() => connected == 2);
+        await client.StopAsync();
+    }
+
+    [Fact]
     public async Task Send_color_returns_false_when_not_connected()
     {
         var client = new HyperionClient(new ListLog());

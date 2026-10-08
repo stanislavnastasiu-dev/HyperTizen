@@ -86,6 +86,46 @@ public class CapturePreviewTests
     }
 
     [Fact]
+    public async Task Repeated_previews_initialize_the_capturer_once()
+    {
+        using var server = new FakeHyperionServer();
+        var (service, capturer) = Create(server);
+
+        for (int i = 0; i < 3; i++) Assert.Null((await service.GetPreviewAsync(Timeout)).Error);
+
+        Assert.Equal(1, capturer.InitializeCalls);
+        Assert.Equal(3, capturer.Captures);
+    }
+
+    [Fact]
+    public async Task Previews_ask_an_unsupported_capturer_only_once()
+    {
+        using var server = new FakeHyperionServer();
+        var (service, capturer) = Create(server);
+        capturer.Supported = false;
+
+        for (int i = 0; i < 3; i++)
+            Assert.Equal(CaptureService.NotSupported, (await service.GetPreviewAsync(Timeout)).Error);
+
+        Assert.Equal(1, capturer.InitializeCalls);
+    }
+
+    [Fact]
+    public async Task Starting_capture_checks_an_unsupported_capturer_again()
+    {
+        using var server = new FakeHyperionServer();
+        var (service, capturer) = Create(server);
+        capturer.Supported = false;
+        await service.GetPreviewAsync(Timeout);
+
+        capturer.Supported = true;
+        Assert.True(await service.StartAsync());
+
+        Assert.Equal(2, capturer.InitializeCalls);
+        await service.StopAsync();
+    }
+
+    [Fact]
     public async Task Start_is_refused_while_a_preview_capture_is_stuck()
     {
         using var server = new FakeHyperionServer();

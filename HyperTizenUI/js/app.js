@@ -130,6 +130,8 @@
 
     if (event.keyCode === KEY_ENTER) {
       event.preventDefault();
+      // A held key repeats; acting on repeats would also press the next screen's focused button.
+      if (event.repeat) return;
       const focused = document.activeElement;
       if (focused && container.contains(focused) && !focused.disabled && focused.offsetParent !== null) focused.click();
       return;

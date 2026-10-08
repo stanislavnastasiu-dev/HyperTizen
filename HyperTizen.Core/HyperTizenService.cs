@@ -33,7 +33,8 @@ namespace HyperTizen.Core
             _log = log ?? throw new ArgumentNullException(nameof(log));
             // Errors from the Hyperion link and the capture loop are what status reports as lastError.
             _errors = new LastErrorLog(log);
-            _client = new HyperionClient(_errors);
+            // An error about the link is no longer current once a connection is made.
+            _client = new HyperionClient(_errors, null, _errors.Clear);
             _capture = new CaptureService(capturer, _client, _errors, null, _options, _errors.Clear);
             _ledTester = new LedTester(_client, _capture, _options);
             _scanner = new SsdpScanner(log);
@@ -82,6 +83,8 @@ namespace HyperTizen.Core
             switch (key)
             {
                 case RpcServerKey:
+                    // Errors about the previous server say nothing about the new one.
+                    _errors.Clear();
                     _client.SetServer(value);
                     break;
 
@@ -110,6 +113,7 @@ namespace HyperTizen.Core
                     _settings.Set(EnabledKey, "false");
                     await _capture.StopAsync().ConfigureAwait(false);
                     _client.SetServer(null);
+                    _errors.Clear();
                     break;
 
                 case MaxFpsKey:
@@ -135,9 +139,11 @@ namespace HyperTizen.Core
             };
         }
 
-        Task<TestLedsResultEvent> IControlActions.TestLedsAsync()
+        async Task<TestLedsResultEvent> IControlActions.TestLedsAsync()
         {
-            return _ledTester.RunAsync();
+            TestLedsResultEvent result = await _ledTester.RunAsync().ConfigureAwait(false);
+            if (result.ok) _errors.Clear();
+            return result;
         }
 
         async Task<PreviewResultEvent> IControlActions.GetPreviewAsync()

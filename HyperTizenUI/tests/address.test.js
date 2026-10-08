@@ -28,6 +28,11 @@ test('formats the stored address', () => {
   assert.equal(address.toWsUrl('192.168.1.20', '8090'), 'ws://192.168.1.20:8090');
 });
 
+test('drops leading zeros so the address is not read as octal', () => {
+  assert.equal(address.toWsUrl('192.168.001.010', '08090'), 'ws://192.168.1.10:8090');
+  assert.equal(address.toWsUrl('010.000.0.1', '80'), 'ws://10.0.0.1:80');
+});
+
 test('converts a discovered device address and shows it without the scheme', () => {
   assert.equal(address.fromDeviceUrl('http://10.0.0.5:8090'), 'ws://10.0.0.5:8090');
   assert.equal(address.fromDeviceUrl('https://10.0.0.5:8092'), 'wss://10.0.0.5:8092');

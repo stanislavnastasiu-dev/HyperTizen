@@ -120,7 +120,8 @@ internal static class Ws
     public static async Task<string> ReceiveAsync(WebSocket socket)
     {
         var buffer = new byte[65536];
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        // Longer than the slowest reply: an LED test against an unreachable server takes 5 seconds.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), timeout.Token);
         return Encoding.UTF8.GetString(buffer, 0, result.Count);
     }

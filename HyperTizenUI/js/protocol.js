@@ -18,6 +18,8 @@
     DeleteConfig: 11
   };
 
+  const MAX_UNANSWERED_STATUS = 2;
+
   HT.timing = { connectHelpMs: 15000, statusMs: 2000, previewMs: 500, scanMs: 10000, retryMs: 2000 };
 
   function createClient(socket, options) {
@@ -46,8 +48,8 @@
       }
     };
 
-    socket.onclose = function () {
-      if (closed) return;
+    function markClosed() {
+      if (closed) return false;
       closed = true;
       const abandoned = pending;
       pending = [];
@@ -55,8 +57,23 @@
         clearTimeout(request.timer);
         request.reject(new Error('closed'));
       });
-      if (client.onClose) client.onClose();
+      return true;
+    }
+
+    socket.onclose = function () {
+      if (markClosed() && client.onClose) client.onClose();
     };
+
+    // A service that stops answering without closing the socket is treated as gone.
+    function giveUp() {
+      if (!markClosed()) return;
+      try {
+        socket.close();
+      } catch (error) {
+        // Already closed.
+      }
+      if (client.onClose) client.onClose();
+    }
 
     // A close event always follows an error.
     socket.onerror = function () {};
@@ -96,7 +113,16 @@
     client.setConfig = (key, value) => send({ event: Events.SetConfig, key, value });
     client.deleteConfig = key => send({ event: Events.DeleteConfig, key });
     client.scan = () => request({ event: Events.ScanSSDP }, Events.SSDPScanResult, timeouts.scan);
-    client.getStatus = () => request({ event: Events.GetStatus }, Events.StatusResult, timeouts.default);
+    let unansweredStatus = 0;
+    client.getStatus = () => request({ event: Events.GetStatus }, Events.StatusResult, timeouts.default).then(
+      status => {
+        unansweredStatus = 0;
+        return status;
+      },
+      error => {
+        if (error.message === 'timeout' && ++unansweredStatus >= MAX_UNANSWERED_STATUS) giveUp();
+        throw error;
+      });
     client.testLeds = () => request({ event: Events.TestLeds }, Events.TestLedsResult, timeouts.test);
     client.getPreview = () => request({ event: Events.GetPreview }, Events.PreviewResult, timeouts.default);
     client.close = () => socket.close();

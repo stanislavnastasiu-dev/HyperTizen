@@ -214,7 +214,10 @@ namespace HyperTizen.Core
             if (!_captureLock.Wait(TimeSpan.FromMilliseconds(500))) return new PreviewFrame(null, NotReturningColors);
             try
             {
-                if (!InitializeCapturer()) return new PreviewFrame(null, NotSupported);
+                // Previews are polled; asking the device again each time would repeat its log lines and
+                // notifications. Starting capture is what checks an unsupported device again.
+                if (_support == Unsupported) return new PreviewFrame(null, NotSupported);
+                if (_support == SupportUnknown && !InitializeCapturer()) return new PreviewFrame(null, NotSupported);
 
                 Rgb10[] colors = _capturer.Capture();
                 RememberFrame(colors);

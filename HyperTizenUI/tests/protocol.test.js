@@ -75,6 +75,38 @@ test('closing rejects what is pending, reports once, and refuses new requests', 
   assert.equal(closes, 1);
 });
 
+test('two unanswered status requests in a row end the connection', async () => {
+  const socket = fakeSocket();
+  let socketClosed = 0;
+  socket.close = () => { socketClosed++; };
+  const client = protocol.createClient(socket, { timeouts: { default: 20 } });
+  let closes = 0;
+  client.onClose = () => { closes++; };
+
+  await assert.rejects(client.getStatus(), /timeout/);
+  assert.equal(closes, 0);
+  await assert.rejects(client.getStatus(), /timeout/);
+
+  assert.equal(closes, 1);
+  assert.equal(socketClosed, 1);
+  await assert.rejects(client.getStatus(), /closed/);
+});
+
+test('an answered status request resets the count of unanswered ones', async () => {
+  const socket = fakeSocket();
+  const client = protocol.createClient(socket, { timeouts: { default: 20 } });
+  let closes = 0;
+  client.onClose = () => { closes++; };
+
+  await assert.rejects(client.getStatus(), /timeout/);
+  const answered = client.getStatus();
+  socket.receive({ Event: 6, version: 'x' });
+  await answered;
+  await assert.rejects(client.getStatus(), /timeout/);
+
+  assert.equal(closes, 0);
+});
+
 test('messages that are not replies are ignored', async () => {
   const socket = fakeSocket();
   const client = protocol.createClient(socket);

@@ -13,6 +13,7 @@ namespace HyperTizen
         private readonly ILog _log;
         private readonly bool _isTizen7OrHigher;
         private Condition _condition;
+        private bool _notified;
 
         private readonly CapturePoint[] _capturedPoints = new CapturePoint[] {
             new CapturePoint(0.21, 0.05),
@@ -76,6 +77,10 @@ namespace HyperTizen
             } catch (Exception ex)
             {
                 _log.Error("The video enhancement library is not usable", ex);
+
+                // Tell the user once, not every time capture is tried again.
+                if (_notified) return false;
+                _notified = true;
 
                 Notification notification = new Notification
                 {

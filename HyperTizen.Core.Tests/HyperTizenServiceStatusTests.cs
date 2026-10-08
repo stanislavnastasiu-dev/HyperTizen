@@ -122,6 +122,27 @@ public class HyperTizenServiceStatusTests
     }
 
     [Fact]
+    public async Task Last_error_from_a_failed_led_test_clears_once_a_test_succeeds()
+    {
+        using var fixture = new Fixture();
+        fixture.Settings.Set("rpcServer", "ws://127.0.0.1:" + TestHelpers.FreePort() + "/");
+        await fixture.Service.StartAsync();
+        using var ui = await fixture.ConnectAsync();
+
+        var failed = await AskAsync(ui, "{\"event\":7}", 8);
+        Assert.False((bool)failed["ok"]!);
+        Assert.Contains("Hyperion connection", (string?)(await StatusAsync(ui))["lastError"]);
+
+        // Capture stays off, so no frame will ever clear the error.
+        await Ws.SendAsync(ui, "{\"event\":0,\"key\":\"rpcServer\",\"value\":\"" + fixture.Hyperion.Uri + "\"}");
+        Assert.Equal(JTokenType.Null, (await StatusAsync(ui))["lastError"]!.Type);
+
+        var passed = await AskAsync(ui, "{\"event\":7}", 8);
+        Assert.True((bool)passed["ok"]!);
+        Assert.Equal(JTokenType.Null, (await StatusAsync(ui))["lastError"]!.Type);
+    }
+
+    [Fact]
     public async Task Led_test_runs_through_the_control_connection()
     {
         using var fixture = new Fixture();
