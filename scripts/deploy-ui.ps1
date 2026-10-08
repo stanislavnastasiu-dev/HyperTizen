@@ -4,6 +4,8 @@ Reads the TV address and certificate profile from tv.local.json in the repositor
 #>
 . (Join-Path $PSScriptRoot 'tv-tools.ps1')
 $appId = '6jwjAZfoVq.HyperTizenUI'
+# `tz run` wants the package id; `tizen run` wants the application id.
+$packageId = '6jwjAZfoVq'
 $source = Join-Path $root 'HyperTizenUI'
 
 $stage = Join-Path ([IO.Path]::GetTempPath()) ('hypertizen-ui-' + [Guid]::NewGuid().ToString('N'))
@@ -53,7 +55,7 @@ try {
     }
 
     Invoke-Step "Starting the UI" {
-        if ($useTz) { & $tizen run -p $appId -e $target }
+        if ($useTz) { & $tizen run -p $packageId -e $target }
         else { & $tizen run -p $appId -s $target }
     }
 
