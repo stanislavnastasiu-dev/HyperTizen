@@ -262,6 +262,7 @@ async function main() {
   host.kill();
   await waitFor('a stopped service shows Connecting', onScreen('connecting'));
   await waitFor('help and Retry appear after 15 seconds', () => visible('connecting-retry'), 25000);
+  await waitFor('the help lists the address that was tried', async () => (await text('connecting-details')).indexOf('127.0.0.1:8086 ') >= 0);
   await shot('7-connecting');
   host = startHost();
   await waitFor('the UI returns to Home when the service is back', onScreen('home'), 30000);

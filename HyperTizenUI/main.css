@@ -72,6 +72,13 @@ ul {
     text-align: left;
 }
 
+/* Technical details for troubleshooting; smaller than normal text on purpose. */
+.details {
+    margin-top: 32px;
+    color: #8a94ad;
+    font-size: 26px;
+}
+
 .step {
     color: #8fb4ff;
     font-size: 32px;

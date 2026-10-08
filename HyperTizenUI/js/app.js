@@ -12,6 +12,8 @@
   const KEY_TV_BACK = 10009;
 
   const state = { client: null, status: null, pollTimer: null, polling: false, attempt: 0 };
+  // What the last connection attempt did, shown on the Connecting screen when the service cannot be reached.
+  const diagnostics = { launch: 'not running on a TV', attempts: [] };
   const screens = {};
 
   const screenElement = name => document.getElementById('screen-' + name);
@@ -39,6 +41,8 @@
     status: () => state.status,
     refresh: pollStatus,
     reconnect: connect,
+    diagnostics: () => 'Service start: ' + diagnostics.launch + '. Tried: '
+      + (diagnostics.attempts.length ? diagnostics.attempts.join(', ') : 'nothing yet') + '.',
     set: (key, value) => withClient(client => client.setConfig(key, value)),
     del: key => withClient(client => client.deleteConfig(key))
   };
@@ -63,10 +67,15 @@
 
   // As a standalone TV app nothing else starts the service; under TizenBrew this is harmless.
   function launchService() {
+    if (!(root.tizen && root.tizen.application)) return;
     try {
-      if (root.tizen && root.tizen.application) root.tizen.application.launch(SERVICE_APP_ID, () => {}, () => {});
+      diagnostics.launch = 'requested';
+      root.tizen.application.launch(
+        SERVICE_APP_ID,
+        () => { diagnostics.launch = 'ok'; },
+        error => { diagnostics.launch = 'refused (' + ((error && (error.message || error.name)) || 'unknown') + ')'; });
     } catch (error) {
-      // Not on a TV, or not allowed: the connection attempt tells the user what is wrong.
+      diagnostics.launch = 'failed (' + error.message + ')';
     }
   }
 
@@ -86,8 +95,18 @@
     }
     launchService();
 
+    const attempts = [];
     HT.connection.fetchTizenBrewIp()
-      .then(ip => HT.connection.open(HT.connection.candidates(root.location, ip), root.WebSocket, 3000))
+      .then(ip => HT.connection.open(
+        HT.connection.candidates(root.location, ip, HT.connection.ownIp(root)),
+        root.WebSocket,
+        3000,
+        (url, result) => {
+          attempts.push(HT.address.display(url) + ' ' + result);
+          if (attempt !== state.attempt) return;
+          diagnostics.attempts = attempts.slice();
+          router.notify('onDiagnostics');
+        }))
       .then(socket => {
         if (attempt !== state.attempt) {
           socket.close();

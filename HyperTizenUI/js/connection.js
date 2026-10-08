@@ -6,7 +6,17 @@
   const PORT = 8086;
   const TIZENBREW_URL = 'http://127.0.0.1:8081';
 
-  function candidates(location, tizenBrewIp) {
+  // The TV's own network address, from the Samsung network API when the page runs on a TV.
+  function ownIp(scope) {
+    try {
+      const ip = scope.webapis.network.getIp();
+      return HT.address.isValidIp(ip) ? ip : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function candidates(location, tizenBrewIp, ownAddress) {
     const urls = [];
     const add = host => {
       const url = 'ws://' + host + ':' + PORT;
@@ -16,6 +26,8 @@
     // Served over http: the desktop host, which also runs the service.
     if (location && /^https?:$/.test(location.protocol) && location.hostname) add(location.hostname);
     add('127.0.0.1');
+    // A TV app may not be allowed to reach the service over loopback, only over the TV's address.
+    if (ownAddress) add(ownAddress);
     if (tizenBrewIp) add(tizenBrewIp);
     return urls;
   }
@@ -56,10 +68,20 @@
     });
   }
 
-  // Tries the addresses one after another.
-  function open(urls, WebSocketConstructor, timeoutMs) {
+  // Tries the addresses one after another. onAttempt(url, result) hears how each one went:
+  // 'open', 'failed', 'closed', 'timeout', or the error message.
+  function open(urls, WebSocketConstructor, timeoutMs, onAttempt) {
+    const report = onAttempt || (() => {});
     return urls.reduce(
-      (attempt, url) => attempt.catch(() => tryOpen(url, WebSocketConstructor, timeoutMs)),
+      (attempt, url) => attempt.catch(() => tryOpen(url, WebSocketConstructor, timeoutMs).then(
+        socket => {
+          report(url, 'open');
+          return socket;
+        },
+        error => {
+          report(url, error.message);
+          throw error;
+        })),
       Promise.reject(new Error('no addresses')));
   }
 
@@ -80,6 +102,6 @@
       .catch(() => done(null));
   }
 
-  HT.connection = { candidates, open, fetchTizenBrewIp };
+  HT.connection = { candidates, open, ownIp, fetchTizenBrewIp };
   if (typeof module !== 'undefined' && module.exports) module.exports = HT.connection;
 })(typeof window !== 'undefined' ? window : globalThis);

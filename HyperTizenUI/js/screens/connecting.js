@@ -12,9 +12,12 @@
     const retry = ctx.el('connecting-retry');
     let timer = null;
 
+    const details = ctx.el('connecting-details');
+
     function showHelp(text, withTips) {
       message.textContent = text;
       tips.hidden = !withTips;
+      details.textContent = ctx.diagnostics();
       help.hidden = false;
       retry.focus();
     }
@@ -42,6 +45,11 @@
 
       leave() {
         clearTimeout(timer);
+      },
+
+      // Keeps the details current while the help is on screen.
+      onDiagnostics() {
+        if (!help.hidden) details.textContent = ctx.diagnostics();
       },
 
       // The service answered the connection but not the status request: it predates this UI.

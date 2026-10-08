@@ -37,6 +37,31 @@ test('a page opened from a file tries the TV itself, then the address TizenBrew 
   assert.deepEqual(connection.candidates(undefined, null), ['ws://127.0.0.1:8086']);
 });
 
+test("the TV's own network address is tried after loopback", () => {
+  assert.deepEqual(
+    connection.candidates({ protocol: 'file:', hostname: '' }, null, '192.168.1.145'),
+    ['ws://127.0.0.1:8086', 'ws://192.168.1.145:8086']);
+  assert.deepEqual(
+    connection.candidates({ protocol: 'file:', hostname: '' }, '192.168.1.145', '192.168.1.145'),
+    ['ws://127.0.0.1:8086', 'ws://192.168.1.145:8086']);
+});
+
+test("reads the TV's own address from the Samsung network API when it exists", () => {
+  assert.equal(connection.ownIp({ webapis: { network: { getIp: () => '192.168.1.145' } } }), '192.168.1.145');
+  assert.equal(connection.ownIp({ webapis: { network: { getIp: () => '0.0.0.0.0' } } }), null);
+  assert.equal(connection.ownIp({ webapis: { network: { getIp: () => { throw new Error('denied'); } } } }), null);
+  assert.equal(connection.ownIp({}), null);
+});
+
+test('reports what happened to each address it tried', async () => {
+  const { FakeWebSocket } = socketsThat(url => ({ 'ws://a': 'fail', 'ws://b': 'hang', 'ws://c': 'open' })[url]);
+  const attempts = [];
+
+  await connection.open(['ws://a', 'ws://b', 'ws://c'], FakeWebSocket, 30, (url, result) => attempts.push(url + ' ' + result));
+
+  assert.deepEqual(attempts, ['ws://a failed', 'ws://b timeout', 'ws://c open']);
+});
+
 test('uses the first address that opens and closes the ones that failed', async () => {
   const { FakeWebSocket, created } = socketsThat(url => (url === 'ws://b' ? 'open' : 'fail'));
 

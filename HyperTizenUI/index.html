@@ -23,6 +23,7 @@
                     <li>Restart the TV after installing it.</li>
                 </ul>
                 <button id="connecting-retry" class="focusable primary">Retry</button>
+                <p id="connecting-details" class="details"></p>
             </div>
         </section>
 
@@ -162,6 +163,8 @@
         </section>
     </main>
 
+    <!-- Samsung TV APIs (the TV's own network address). Absent in a PC browser, where it is not needed. -->
+    <script src="$WEBAPIS/webapis/webapis.js"></script>
     <script src="js/address.js"></script>
     <script src="js/focus.js"></script>
     <script src="js/protocol.js"></script>
