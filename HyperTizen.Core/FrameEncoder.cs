@@ -51,7 +51,13 @@ namespace HyperTizen.Core
 
         private static byte Clamp(int channel)
         {
-            return (byte)Math.Max(0, Math.Min(channel, 255));
+            return ToByte(channel);
+        }
+
+        // Captured channels run from 0 to 1023; images and previews use 0 to 255.
+        public static byte ToByte(int tenBit)
+        {
+            return (byte)(Math.Max(0, Math.Min(tenBit, 1023)) >> 2);
         }
     }
 }

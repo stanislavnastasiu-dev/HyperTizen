@@ -92,7 +92,7 @@ internal sealed class FakeCapturer : IScreenCapturer
 
             Interlocked.Increment(ref Captures);
             var colors = new Rgb10[16];
-            for (int i = 0; i < colors.Length; i++) colors[i] = new Rgb10(i, i, i);
+            for (int i = 0; i < colors.Length; i++) colors[i] = new Rgb10(i * 64, i * 64, i * 64);
             return colors;
         }
         finally

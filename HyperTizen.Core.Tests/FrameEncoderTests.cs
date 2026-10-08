@@ -8,7 +8,7 @@ public class FrameEncoderTests
     {
         var colors = new Rgb10[16];
         for (int i = 0; i < colors.Length; i++)
-            colors[i] = new Rgb10(i * 10 + 1, i * 10 + 2, i * 10 + 3);
+            colors[i] = new Rgb10(i * 40 + 100, i * 40 + 200, i * 40 + 300);
         return colors;
     }
 
@@ -18,7 +18,8 @@ public class FrameEncoderTests
         return (rgb[offset], rgb[offset + 1], rgb[offset + 2]);
     }
 
-    private static (int, int, int) Expected(int index) => (index * 10 + 1, index * 10 + 2, index * 10 + 3);
+    // Captured channels are 10-bit; the image holds 8-bit ones, a quarter of the value.
+    private static (int, int, int) Expected(int index) => ((index * 40 + 100) / 4, (index * 40 + 200) / 4, (index * 40 + 300) / 4);
 
     [Theory]
     [InlineData(8, 0, 0)]
@@ -67,12 +68,32 @@ public class FrameEncoderTests
     }
 
     [Fact]
-    public void Channels_are_clamped_to_a_byte()
+    public void Ten_bit_channels_are_scaled_to_a_byte()
     {
         var colors = Colors();
-        colors[0] = new Rgb10(1023, 300, -5);
+        colors[0] = new Rgb10(1023, 512, 4);
 
-        Assert.Equal((255, 255, 0), Pixel(FrameEncoder.ToRgb(colors), 8, 0));
+        Assert.Equal((255, 128, 1), Pixel(FrameEncoder.ToRgb(colors), 8, 0));
+    }
+
+    [Fact]
+    public void Out_of_range_channels_are_limited_before_scaling()
+    {
+        var colors = Colors();
+        colors[0] = new Rgb10(4000, -5, 1024);
+
+        Assert.Equal((255, 0, 255), Pixel(FrameEncoder.ToRgb(colors), 8, 0));
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(3, 0)]
+    [InlineData(4, 1)]
+    [InlineData(188, 47)]
+    [InlineData(1023, 255)]
+    public void To_byte_divides_by_four(int tenBit, int expected)
+    {
+        Assert.Equal(expected, FrameEncoder.ToByte(tenBit));
     }
 
     [Fact]

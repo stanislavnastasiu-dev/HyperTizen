@@ -155,7 +155,7 @@ namespace HyperTizen.Core
             for (int i = 0; i < colors.Length; i++)
             {
                 Rgb10 color = frame.Colors[i];
-                colors[i] = new[] { ClampToByte(color.R), ClampToByte(color.G), ClampToByte(color.B) };
+                colors[i] = new int[] { FrameEncoder.ToByte(color.R), FrameEncoder.ToByte(color.G), FrameEncoder.ToByte(color.B) };
             }
             return new PreviewResultEvent(true, colors, null);
         }
@@ -196,11 +196,6 @@ namespace HyperTizen.Core
             return _settings.Contains(EnabledKey)
                 && bool.TryParse(_settings.Get(EnabledKey), out bool enabled)
                 && enabled;
-        }
-
-        private static int ClampToByte(int channel)
-        {
-            return Math.Max(0, Math.Min(channel, 255));
         }
 
         private static string ReadVersion()

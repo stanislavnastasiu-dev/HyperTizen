@@ -22,22 +22,22 @@ public sealed class SimulatedCapturer : IScreenCapturer
         return colors;
     }
 
-    // Full-saturation, full-brightness color for a hue in degrees. Channels are 0..255
-    // because the frame encoder clamps to a byte rather than scaling.
+    // Full-saturation, full-brightness color for a hue in degrees, on the TV's 0..1023 scale.
     private static Rgb10 FromHue(double hue)
     {
+        const int Max = 1023;
         double sector = hue / 60.0;
-        int rising = (int)(255 * (sector - Math.Floor(sector)));
-        int falling = 255 - rising;
+        int rising = (int)(Max * (sector - Math.Floor(sector)));
+        int falling = Max - rising;
 
         return (int)Math.Floor(sector) switch
         {
-            0 => new Rgb10(255, rising, 0),
-            1 => new Rgb10(falling, 255, 0),
-            2 => new Rgb10(0, 255, rising),
-            3 => new Rgb10(0, falling, 255),
-            4 => new Rgb10(rising, 0, 255),
-            _ => new Rgb10(255, 0, falling)
+            0 => new Rgb10(Max, rising, 0),
+            1 => new Rgb10(falling, Max, 0),
+            2 => new Rgb10(0, Max, rising),
+            3 => new Rgb10(0, falling, Max),
+            4 => new Rgb10(rising, 0, Max),
+            _ => new Rgb10(Max, 0, falling)
         };
     }
 }
