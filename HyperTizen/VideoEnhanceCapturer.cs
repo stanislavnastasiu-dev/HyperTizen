@@ -126,6 +126,11 @@ namespace HyperTizen
             return false;
         }
 
+        public int BatchSize
+        {
+            get { return _condition.ScreenCapturePoints; }
+        }
+
         public Rgb10[] Capture(IReadOnlyList<CapturePoint> points)
         {
             Rgb10[] colorData = new Rgb10[points.Count];

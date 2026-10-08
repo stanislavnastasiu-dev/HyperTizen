@@ -31,6 +31,11 @@
     return HT.address.isValidIp(value) ? value.split('.').map(Number).join('.') : null;
   }
 
+  // The device whose service is shown: the one named in the page address, else the TV the page runs on.
+  function serviceHost(scope, override) {
+    return override || ownIp(scope);
+  }
+
   function candidates(location, tizenBrewIp, ownAddress, override) {
     const urls = [];
     const add = host => {
@@ -123,6 +128,6 @@
       .catch(() => done(null));
   }
 
-  HT.connection = { candidates, open, ownIp, serviceOverride, fetchTizenBrewIp };
+  HT.connection = { candidates, open, ownIp, serviceOverride, serviceHost, fetchTizenBrewIp };
   if (typeof module !== 'undefined' && module.exports) module.exports = HT.connection;
 })(typeof window !== 'undefined' ? window : globalThis);

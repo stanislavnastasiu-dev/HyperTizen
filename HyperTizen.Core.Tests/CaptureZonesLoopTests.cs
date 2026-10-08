@@ -66,6 +66,95 @@ public class CaptureZonesLoopTests
     }
 
     [Fact]
+    public async Task After_a_first_whole_frame_one_batch_is_captured_and_sent_at_a_time()
+    {
+        using var server = new FakeHyperionServer();
+        var setup = new Setup(server);
+        setup.Capturer.BatchSize = 2;
+        setup.Options.Layout = new CaptureLayout(3, 0, 0, 0);
+
+        await setup.Service.StartAsync();
+        await TestHelpers.WaitUntilAsync(() => setup.Capturer.Captures >= 5 && Images(server) >= 4);
+        await setup.Service.StopAsync();
+
+        // Three points in batches of two: two, then the one left over.
+        Assert.Equal(new[] { 3, 2, 1, 2, 1 }, setup.Capturer.PointCounts.Take(5));
+        Assert.Empty(setup.Log.Errors);
+    }
+
+    [Fact]
+    public async Task A_batch_replaces_only_the_colors_of_its_own_points()
+    {
+        using var server = new FakeHyperionServer();
+        var setup = new Setup(server);
+        setup.Capturer.BatchSize = 2;
+        setup.Capturer.StampColors = true;
+        setup.Options.Layout = new CaptureLayout(4, 0, 0, 0);
+
+        await setup.Service.StartAsync();
+        await TestHelpers.WaitUntilAsync(() => setup.Capturer.Captures >= 3);
+        PreviewFrame frame = await setup.Service.GetPreviewAsync(TimeSpan.FromSeconds(3));
+        await setup.Service.StopAsync();
+
+        // Each half was captured together, and one of them one capture later than the other.
+        Assert.Equal(frame.Colors[0].R, frame.Colors[1].R);
+        Assert.Equal(frame.Colors[2].R, frame.Colors[3].R);
+        Assert.Equal(1, Math.Abs(frame.Colors[0].R - frame.Colors[2].R));
+    }
+
+    [Fact]
+    public async Task A_batch_that_holds_every_point_captures_the_whole_frame_each_time()
+    {
+        using var server = new FakeHyperionServer();
+        var setup = new Setup(server);
+        setup.Capturer.BatchSize = 16;
+
+        await setup.Service.StartAsync();
+        await TestHelpers.WaitUntilAsync(() => setup.Capturer.Captures >= 3);
+        await setup.Service.StopAsync();
+
+        Assert.All(setup.Capturer.PointCounts, count => Assert.Equal(14, count));
+    }
+
+    [Fact]
+    public async Task A_layout_change_starts_over_with_a_whole_frame()
+    {
+        using var server = new FakeHyperionServer();
+        var setup = new Setup(server);
+        setup.Capturer.BatchSize = 2;
+        setup.Options.Layout = new CaptureLayout(4, 0, 0, 0);
+        await setup.Service.StartAsync();
+        await TestHelpers.WaitUntilAsync(() => setup.Capturer.Captures >= 3);
+
+        setup.Options.Layout = new CaptureLayout(6, 0, 0, 0);
+
+        await TestHelpers.WaitUntilAsync(() => setup.Capturer.PointCounts.Contains(6));
+        await setup.Service.StopAsync();
+        Assert.Empty(setup.Log.Errors);
+    }
+
+    [Fact]
+    public async Task Capture_starts_over_with_a_whole_frame_after_a_pause()
+    {
+        using var server = new FakeHyperionServer();
+        var setup = new Setup(server);
+        setup.Capturer.BatchSize = 2;
+        setup.Options.Layout = new CaptureLayout(4, 0, 0, 0);
+        await setup.Service.StartAsync();
+        await TestHelpers.WaitUntilAsync(() => setup.Capturer.Captures >= 3);
+
+        setup.Service.Paused = true;
+        // Long enough for a capture that was under way to finish.
+        await Task.Delay(200);
+        int before = setup.Capturer.PointCounts.Count;
+        setup.Service.Paused = false;
+
+        await TestHelpers.WaitUntilAsync(() => setup.Capturer.PointCounts.Count > before);
+        await setup.Service.StopAsync();
+        Assert.Equal(4, setup.Capturer.PointCounts.ElementAt(before));
+    }
+
+    [Fact]
     public async Task Timing_is_reported_while_frames_are_sent()
     {
         using var server = new FakeHyperionServer();

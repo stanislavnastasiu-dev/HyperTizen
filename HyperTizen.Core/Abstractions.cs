@@ -23,6 +23,10 @@ namespace HyperTizen.Core
         // False when the device cannot capture; the capture loop does not start.
         bool Initialize();
 
+        // How many points the device measures in one go, known once Initialize has run. Zero when
+        // it takes any number at once.
+        int BatchSize { get; }
+
         // One color per point, in the same order. Blocks for as long as the device needs.
         Rgb10[] Capture(IReadOnlyList<CapturePoint> points);
     }

@@ -25,9 +25,9 @@
 
     function render(status) {
       if (!status) return;
-      // When watching another device's service, say which one.
-      const remote = ctx.remoteService();
-      ctx.el('tile-version').textContent = 'Version ' + status.version + (remote ? ' on ' + remote : '');
+      // Say where the service is: this TV's address, or the other device being watched.
+      const host = ctx.serviceHost();
+      ctx.el('tile-version').textContent = 'Version ' + status.version + (host ? ' on ' + host : '');
       ctx.el('tile-server').textContent = status.rpcServer ? HT.address.display(status.rpcServer) : 'None';
 
       const connection = ctx.el('tile-connection');

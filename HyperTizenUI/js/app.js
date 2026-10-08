@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   const HT = root.HyperTizen;
-  HT.uiVersion = '1.1.1';
+  HT.uiVersion = '1.1.2';
 
   const SERVICE_APP_ID = 'io.gh.reisxd.HyperTizen';
   const ARROWS = { 37: 'left', 38: 'up', 39: 'right', 40: 'down' };
@@ -43,7 +43,7 @@
     status: () => state.status,
     refresh: pollStatus,
     reconnect: connect,
-    remoteService: () => remoteService,
+    serviceHost: () => HT.connection.serviceHost(root, remoteService),
     diagnostics: () => 'Service start: ' + diagnostics.launch + '. Tried: '
       + (diagnostics.attempts.length ? diagnostics.attempts.join(', ') : 'nothing yet') + '.',
     set: (key, value) => withClient(client => client.setConfig(key, value)),
