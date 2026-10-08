@@ -10,13 +10,23 @@ namespace HyperTizen.Core.Tests;
 
 internal static class TestHelpers
 {
+    private static readonly HashSet<int> HandedOut = new();
+
+    // A port nothing is listening on. Never returns the same port twice in one test run:
+    // the port is released before the caller binds it, so the system may offer it again.
     public static int FreePort()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
-        return port;
+        while (true)
+        {
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            lock (HandedOut)
+            {
+                if (HandedOut.Add(port)) return port;
+            }
+        }
     }
 
     public static async Task WaitUntilAsync(Func<bool> condition, int timeoutMs = 5000)
