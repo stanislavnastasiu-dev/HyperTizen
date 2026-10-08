@@ -13,3 +13,4 @@ tizen_workspace.yaml
 .tizen-rds
 HyperTizenUI/Debug
 HyperTizenUI/Release
+homey.local.json
