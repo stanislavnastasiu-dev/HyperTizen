@@ -16,12 +16,33 @@
     }
   }
 
-  function candidates(location, tizenBrewIp, ownAddress) {
+  // "?service=<address>" in the page address points the UI at a service on another device,
+  // for example a PC browser watching the real TV. Returns that address, or null.
+  function serviceOverride(location) {
+    const match = /[?&]service=([^&]*)/.exec((location && location.search) || '');
+    if (!match) return null;
+
+    let value;
+    try {
+      value = decodeURIComponent(match[1]);
+    } catch (error) {
+      return null;
+    }
+    return HT.address.isValidIp(value) ? value.split('.').map(Number).join('.') : null;
+  }
+
+  function candidates(location, tizenBrewIp, ownAddress, override) {
     const urls = [];
     const add = host => {
       const url = 'ws://' + host + ':' + PORT;
       if (urls.indexOf(url) < 0) urls.push(url);
     };
+
+    // Asked for one service explicitly: silently using another would show the wrong device.
+    if (override) {
+      add(override);
+      return urls;
+    }
 
     // Served over http: the desktop host, which also runs the service.
     if (location && /^https?:$/.test(location.protocol) && location.hostname) add(location.hostname);
@@ -102,6 +123,6 @@
       .catch(() => done(null));
   }
 
-  HT.connection = { candidates, open, ownIp, fetchTizenBrewIp };
+  HT.connection = { candidates, open, ownIp, serviceOverride, fetchTizenBrewIp };
   if (typeof module !== 'undefined' && module.exports) module.exports = HT.connection;
 })(typeof window !== 'undefined' ? window : globalThis);

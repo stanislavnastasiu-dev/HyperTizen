@@ -25,7 +25,9 @@
 
     function render(status) {
       if (!status) return;
-      ctx.el('tile-version').textContent = 'Version ' + status.version;
+      // When watching another device's service, say which one.
+      const remote = ctx.remoteService();
+      ctx.el('tile-version').textContent = 'Version ' + status.version + (remote ? ' on ' + remote : '');
       ctx.el('tile-server').textContent = status.rpcServer ? HT.address.display(status.rpcServer) : 'None';
 
       const connection = ctx.el('tile-connection');

@@ -283,6 +283,24 @@ async function main() {
   await waitFor('the server is removed from the settings file', async () => !('rpcServer' in JSON.parse(fs.readFileSync(settingsFile, 'utf8'))));
   expect('capture was turned off', JSON.parse(fs.readFileSync(settingsFile, 'utf8')).enabled, 'false');
 
+  // Pointing the page at a named service.
+  await evaluate("document.getElementById('server-manual').click()");
+  await waitFor('the keypad opens again', onScreen('keypad'));
+  for (const key of ['1', '2', '7', 'dot', '0', 'dot', '0', 'dot', '1']) await click('key-' + key);
+  await click('keypad-next');
+  for (let i = 0; i < 4; i++) await click('key-del');
+  for (const digit of String(hyperion.port)) await click('key-' + digit);
+  await click('keypad-connect');
+  await waitFor('the server is stored again', async () => 'rpcServer' in JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
+  await send('Page.navigate', { url: UI_URL + '?service=127.0.0.1' });
+  await waitFor('a page with ?service= reaches Home', onScreen('home'), 30000);
+  await waitFor('Home names the service it is watching', async () => (await text('tile-version')) === 'Version 1.1.0 on 127.0.0.1');
+  await send('Page.navigate', { url: UI_URL + '?service=127.0.0.2' });
+  await waitFor('an unreachable ?service= is not replaced by the local one', async () =>
+    (await currentScreen()) === 'screen-connecting' && (await visible('connecting-retry'))
+    && (await text('connecting-details')).indexOf('127.0.0.2:8086 ') >= 0
+    && (await text('connecting-details')).indexOf('127.0.0.1:8086') < 0, 30000);
+
   console.log('\nSMOKE TEST PASSED. Screenshots: ' + shots);
 }
 

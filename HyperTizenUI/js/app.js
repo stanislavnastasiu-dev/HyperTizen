@@ -12,6 +12,8 @@
   const KEY_TV_BACK = 10009;
 
   const state = { client: null, status: null, pollTimer: null, polling: false, attempt: 0 };
+  // Set when the page address names a service on another device ("?service=<address>").
+  const remoteService = HT.connection.serviceOverride(root.location);
   // What the last connection attempt did, shown on the Connecting screen when the service cannot be reached.
   const diagnostics = { launch: 'not running on a TV', attempts: [] };
   const screens = {};
@@ -41,6 +43,7 @@
     status: () => state.status,
     refresh: pollStatus,
     reconnect: connect,
+    remoteService: () => remoteService,
     diagnostics: () => 'Service start: ' + diagnostics.launch + '. Tried: '
       + (diagnostics.attempts.length ? diagnostics.attempts.join(', ') : 'nothing yet') + '.',
     set: (key, value) => withClient(client => client.setConfig(key, value)),
@@ -98,7 +101,7 @@
     const attempts = [];
     HT.connection.fetchTizenBrewIp()
       .then(ip => HT.connection.open(
-        HT.connection.candidates(root.location, ip, HT.connection.ownIp(root)),
+        HT.connection.candidates(root.location, ip, HT.connection.ownIp(root), remoteService),
         root.WebSocket,
         3000,
         (url, result) => {

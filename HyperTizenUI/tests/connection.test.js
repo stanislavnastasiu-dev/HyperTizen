@@ -46,6 +46,26 @@ test("the TV's own network address is tried after loopback", () => {
     ['ws://127.0.0.1:8086', 'ws://192.168.1.145:8086']);
 });
 
+test('a service address in the page address is the only one tried', () => {
+  assert.deepEqual(
+    connection.candidates({ protocol: 'http:', hostname: '127.0.0.1' }, '10.0.0.9', '10.0.0.8', '192.168.1.145'),
+    ['ws://192.168.1.145:8086']);
+});
+
+test('reads the service address from the page address', () => {
+  assert.equal(connection.serviceOverride({ search: '?service=192.168.1.145' }), '192.168.1.145');
+  assert.equal(connection.serviceOverride({ search: '?x=1&service=10.0.0.5&y=2' }), '10.0.0.5');
+  assert.equal(connection.serviceOverride({ search: '?service=192.168.001.145' }), '192.168.1.145');
+});
+
+test('ignores a missing or malformed service address', () => {
+  for (const search of ['', '?', '?service=', '?service=tv.local', '?service=1.2.3', '?service=1.2.3.4:9000', '?other=1.2.3.4', '?myservice=1.2.3.4']) {
+    assert.equal(connection.serviceOverride({ search }), null, search);
+  }
+  assert.equal(connection.serviceOverride(undefined), null);
+  assert.equal(connection.serviceOverride({}), null);
+});
+
 test("reads the TV's own address from the Samsung network API when it exists", () => {
   assert.equal(connection.ownIp({ webapis: { network: { getIp: () => '192.168.1.145' } } }), '192.168.1.145');
   assert.equal(connection.ownIp({ webapis: { network: { getIp: () => '0.0.0.0.0' } } }), null);

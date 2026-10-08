@@ -60,6 +60,8 @@ dotnet run --project HyperTizen.Desktop
 
 The control server listens on `ws://127.0.0.1:8086`, and the same address serves the TV UI: open `http://127.0.0.1:8086/` in a browser and use the arrow keys, Enter and Escape in place of the remote. Colors are a simulated rainbow; everything else, including the connection to Hyperion / HyperHDR, is real. Settings are stored in `%LOCALAPPDATA%\HyperTizen\settings.json`, or in the file named by the `HYPERTIZEN_SETTINGS` environment variable.
 
+To watch the real TV from your PC instead (for example the live Preview while the TV shows your content), add the TV's address to the page address: `http://127.0.0.1:8086/?service=192.168.1.50`. The page then talks only to the service on that TV, and Home shows which one it is.
+
 Run the tests with:
 
 ```bash
