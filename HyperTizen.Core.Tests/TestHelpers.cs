@@ -71,6 +71,9 @@ internal sealed class FakeCapturer : IScreenCapturer
     public int FailuresRemaining;
     public int Entered;
     public ManualResetEventSlim? Gate;
+    public int LastPointCount;
+    // Returns this many colors more than asked for, to stand in for a broken capturer.
+    public int ExtraColors;
 
     public bool Initialize()
     {
@@ -78,7 +81,7 @@ internal sealed class FakeCapturer : IScreenCapturer
         return Supported;
     }
 
-    public Rgb10[] Capture()
+    public Rgb10[] Capture(IReadOnlyList<CapturePoint> points)
     {
         int active = Interlocked.Increment(ref _active);
         try
@@ -91,7 +94,8 @@ internal sealed class FakeCapturer : IScreenCapturer
                 throw new InvalidOperationException("capture failed");
 
             Interlocked.Increment(ref Captures);
-            var colors = new Rgb10[16];
+            LastPointCount = points.Count;
+            var colors = new Rgb10[points.Count + ExtraColors];
             for (int i = 0; i < colors.Length; i++) colors[i] = new Rgb10(i * 64, i * 64, i * 64);
             return colors;
         }
