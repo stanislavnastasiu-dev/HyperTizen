@@ -73,6 +73,13 @@ test("reads the TV's own address from the Samsung network API when it exists", (
   assert.equal(connection.ownIp({}), null);
 });
 
+test('the service shown is on the device named in the page address, else on this TV', () => {
+  const tv = { webapis: { network: { getIp: () => '192.168.1.145' } } };
+  assert.equal(connection.serviceHost(tv, null), '192.168.1.145');
+  assert.equal(connection.serviceHost(tv, '10.0.0.7'), '10.0.0.7');
+  assert.equal(connection.serviceHost({}, null), null);
+});
+
 test('reports what happened to each address it tried', async () => {
   const { FakeWebSocket } = socketsThat(url => ({ 'ws://a': 'fail', 'ws://b': 'hang', 'ws://c': 'open' })[url]);
   const attempts = [];
