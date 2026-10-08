@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HyperTizen.Core\HyperTizen.Core.csproj" />
+    <ProjectReference Include="..\HyperTizen.Desktop\HyperTizen.Desktop.csproj" />
   </ItemGroup>
 
 </Project>
