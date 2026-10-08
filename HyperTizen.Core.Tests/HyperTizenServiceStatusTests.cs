@@ -59,7 +59,7 @@ public class HyperTizenServiceStatusTests
 
         var status = await StatusAsync(ui);
 
-        Assert.Equal("1.1.2", (string?)status["version"]);
+        Assert.Equal("1.1.3", (string?)status["version"]);
         Assert.False((bool)status["enabled"]!);
         Assert.Equal(JTokenType.Null, status["rpcServer"]!.Type);
         Assert.False((bool)status["connected"]!);
