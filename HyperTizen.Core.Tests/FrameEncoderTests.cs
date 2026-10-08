@@ -4,11 +4,12 @@ namespace HyperTizen.Core.Tests;
 
 public class FrameEncoderTests
 {
-    private static Rgb10[] Colors()
+    // Color i is (i * 20 + 100, i * 20 + 200, i * 20 + 300): distinct for every zone of the largest layout.
+    private static Rgb10[] Colors(CaptureLayout layout)
     {
-        var colors = new Rgb10[16];
+        var colors = new Rgb10[layout.Points.Length];
         for (int i = 0; i < colors.Length; i++)
-            colors[i] = new Rgb10(i * 40 + 100, i * 40 + 200, i * 40 + 300);
+            colors[i] = new Rgb10(i * 20 + 100, i * 20 + 200, i * 20 + 300);
         return colors;
     }
 
@@ -19,16 +20,19 @@ public class FrameEncoderTests
     }
 
     // Captured channels are 10-bit; the image holds 8-bit ones, a quarter of the value.
-    private static (int, int, int) Expected(int index) => ((index * 40 + 100) / 4, (index * 40 + 200) / 4, (index * 40 + 300) / 4);
+    private static (int, int, int) Expected(int index) => ((index * 20 + 100) / 4, (index * 20 + 200) / 4, (index * 20 + 300) / 4);
+
+    private static (int, int, int) PixelOf(CaptureLayout layout, int x, int y) =>
+        Pixel(FrameEncoder.ToRgb(Colors(layout), layout), x, y);
 
     [Theory]
     [InlineData(8, 0, 0)]
     [InlineData(24, 0, 1)]
     [InlineData(40, 3, 2)]
     [InlineData(56, 3, 3)]
-    public void Top_edge_uses_colors_0_to_3(int x, int y, int colorIndex)
+    public void Top_border_shows_the_top_zones_left_to_right(int x, int y, int zone)
     {
-        Assert.Equal(Expected(colorIndex), Pixel(FrameEncoder.ToRgb(Colors()), x, y));
+        Assert.Equal(Expected(zone), PixelOf(CaptureLayout.Default, x, y));
     }
 
     [Theory]
@@ -36,9 +40,9 @@ public class FrameEncoderTests
     [InlineData(24, 44, 8)]
     [InlineData(40, 47, 9)]
     [InlineData(56, 47, 10)]
-    public void Bottom_edge_uses_colors_7_to_10(int x, int y, int colorIndex)
+    public void Bottom_border_shows_the_bottom_zones_left_to_right(int x, int y, int zone)
     {
-        Assert.Equal(Expected(colorIndex), Pixel(FrameEncoder.ToRgb(Colors()), x, y));
+        Assert.Equal(Expected(zone), PixelOf(CaptureLayout.Default, x, y));
     }
 
     [Theory]
@@ -46,9 +50,9 @@ public class FrameEncoderTests
     [InlineData(2, 8, 11)]
     [InlineData(1, 24, 12)]
     [InlineData(0, 47, 13)]
-    public void Left_edge_uses_colors_11_to_13_and_wins_the_corners(int x, int y, int colorIndex)
+    public void Left_border_shows_the_left_zones_top_to_bottom_and_wins_the_corners(int x, int y, int zone)
     {
-        Assert.Equal(Expected(colorIndex), Pixel(FrameEncoder.ToRgb(Colors()), x, y));
+        Assert.Equal(Expected(zone), PixelOf(CaptureLayout.Default, x, y));
     }
 
     [Theory]
@@ -56,33 +60,86 @@ public class FrameEncoderTests
     [InlineData(61, 8, 4)]
     [InlineData(62, 24, 5)]
     [InlineData(63, 47, 6)]
-    public void Right_edge_uses_colors_4_to_6_and_wins_the_corners(int x, int y, int colorIndex)
+    public void Right_border_shows_the_right_zones_top_to_bottom_and_wins_the_corners(int x, int y, int zone)
     {
-        Assert.Equal(Expected(colorIndex), Pixel(FrameEncoder.ToRgb(Colors()), x, y));
+        Assert.Equal(Expected(zone), PixelOf(CaptureLayout.Default, x, y));
+    }
+
+    [Fact]
+    public void The_zone_measured_at_the_bottom_left_colors_the_bottom_left_of_the_image()
+    {
+        var layout = CaptureLayout.Default;
+        int zone = layout.Offset(Edge.Bottom);
+
+        Assert.True(layout.Points[zone].X < 0.5 && layout.Points[zone].Y > 0.5);
+        Assert.Equal(Expected(zone), PixelOf(layout, 8, 46));
+    }
+
+    [Fact]
+    public void The_zone_measured_at_the_top_left_colors_the_top_of_the_left_border()
+    {
+        var layout = CaptureLayout.Default;
+        int zone = layout.Offset(Edge.Left);
+
+        Assert.True(layout.Points[zone].X < 0.5 && layout.Points[zone].Y < 0.5);
+        Assert.Equal(Expected(zone), PixelOf(layout, 1, 8));
+    }
+
+    [Fact]
+    public void Each_border_is_split_into_as_many_bands_as_its_edge_has_zones()
+    {
+        // 16 top zones: bands 4 pixels wide. 12 right zones: bands 4 pixels high. 2 bottom zones.
+        var layout = new CaptureLayout(16, 2, 0, 12);
+
+        Assert.Equal(Expected(0), PixelOf(layout, 3, 0));
+        Assert.Equal(Expected(1), PixelOf(layout, 4, 0));
+        Assert.Equal(Expected(14), PixelOf(layout, 59, 0));
+        Assert.Equal(Expected(layout.Offset(Edge.Right)), PixelOf(layout, 62, 3));
+        Assert.Equal(Expected(layout.Offset(Edge.Right) + 1), PixelOf(layout, 62, 4));
+        Assert.Equal(Expected(layout.Offset(Edge.Right) + 11), PixelOf(layout, 62, 47));
+        Assert.Equal(Expected(layout.Offset(Edge.Bottom)), PixelOf(layout, 31, 46));
+        Assert.Equal(Expected(layout.Offset(Edge.Bottom) + 1), PixelOf(layout, 32, 46));
+    }
+
+    [Fact]
+    public void A_border_whose_edge_has_no_zones_is_black()
+    {
+        var layout = new CaptureLayout(4, 0, 3, 3);
+
+        Assert.Equal((0, 0, 0), PixelOf(layout, 32, 46));
+    }
+
+    [Fact]
+    public void Without_left_zones_the_top_border_keeps_its_corner()
+    {
+        var layout = new CaptureLayout(16, 2, 0, 12);
+
+        Assert.Equal(Expected(0), PixelOf(layout, 0, 0));
+        Assert.Equal((0, 0, 0), PixelOf(layout, 1, 24));
     }
 
     [Fact]
     public void Interior_is_black()
     {
-        Assert.Equal((0, 0, 0), Pixel(FrameEncoder.ToRgb(Colors()), 32, 24));
+        Assert.Equal((0, 0, 0), PixelOf(CaptureLayout.Default, 32, 24));
     }
 
     [Fact]
     public void Ten_bit_channels_are_scaled_to_a_byte()
     {
-        var colors = Colors();
+        var colors = Colors(CaptureLayout.Default);
         colors[0] = new Rgb10(1023, 512, 4);
 
-        Assert.Equal((255, 128, 1), Pixel(FrameEncoder.ToRgb(colors), 8, 0));
+        Assert.Equal((255, 128, 1), Pixel(FrameEncoder.ToRgb(colors, CaptureLayout.Default), 8, 0));
     }
 
     [Fact]
     public void Out_of_range_channels_are_limited_before_scaling()
     {
-        var colors = Colors();
+        var colors = Colors(CaptureLayout.Default);
         colors[0] = new Rgb10(4000, -5, 1024);
 
-        Assert.Equal((255, 0, 255), Pixel(FrameEncoder.ToRgb(colors), 8, 0));
+        Assert.Equal((255, 0, 255), Pixel(FrameEncoder.ToRgb(colors, CaptureLayout.Default), 8, 0));
     }
 
     [Theory]
@@ -97,21 +154,23 @@ public class FrameEncoderTests
     }
 
     [Fact]
-    public void Rejects_too_few_colors()
+    public void Rejects_a_number_of_colors_that_does_not_match_the_layout()
     {
-        Assert.Throws<ArgumentException>(() => FrameEncoder.ToRgb(new Rgb10[13]));
+        Assert.Throws<ArgumentException>(() => FrameEncoder.ToRgb(new Rgb10[13], CaptureLayout.Default));
+        Assert.Throws<ArgumentException>(() => FrameEncoder.ToRgb(new Rgb10[16], CaptureLayout.Default));
     }
 
     [Fact]
     public void Rejects_null()
     {
-        Assert.Throws<ArgumentNullException>(() => FrameEncoder.ToRgb(null!));
+        Assert.Throws<ArgumentNullException>(() => FrameEncoder.ToRgb(null!, CaptureLayout.Default));
+        Assert.Throws<ArgumentNullException>(() => FrameEncoder.ToRgb(new Rgb10[14], null!));
     }
 
     [Fact]
     public void Base64_output_is_a_png()
     {
-        byte[] png = Convert.FromBase64String(FrameEncoder.ToBase64Png(Colors()));
+        byte[] png = Convert.FromBase64String(FrameEncoder.ToBase64Png(Colors(CaptureLayout.Default), CaptureLayout.Default));
 
         Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, png[..4]);
     }
