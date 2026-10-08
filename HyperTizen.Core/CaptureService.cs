@@ -343,7 +343,8 @@ namespace HyperTizen.Core
         private async Task RunAsync(CancellationToken cancellation)
         {
             int lastPriority = -1;
-            // The frame being kept up to date one batch at a time, and where its next batch starts.
+            // The frame being kept up to date one batch at a time, and where in the layout's
+            // spread order its next batch starts.
             PreviewFrame current = null;
             int next = 0;
             while (!cancellation.IsCancellationRequested)
@@ -378,11 +379,15 @@ namespace HyperTizen.Core
                         }
                         else
                         {
+                            // In the layout's spread order, so that a change of picture shows on all
+                            // edges at once instead of travelling around the screen.
                             int count = Math.Min(batch, layout.Points.Length - next);
-                            Rgb10[] measured = CapturePoints(new ArraySegment<CapturePoint>(layout.Points, next, count));
+                            var points = new CapturePoint[count];
+                            for (int i = 0; i < count; i++) points[i] = layout.Points[layout.SpreadOrder[next + i]];
+                            Rgb10[] measured = CapturePoints(points);
                             // A copy: the frame a preview already holds must not change.
                             colors = (Rgb10[])current.Colors.Clone();
-                            Array.Copy(measured, 0, colors, next, count);
+                            for (int i = 0; i < count; i++) colors[layout.SpreadOrder[next + i]] = measured[i];
                             next = (next + count) % layout.Points.Length;
                         }
                     }

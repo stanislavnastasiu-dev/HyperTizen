@@ -78,6 +78,8 @@ internal sealed class FakeCapturer : IScreenCapturer
     public string? Diagnostics { get; set; }
     // How many points each capture was asked for, in order.
     public ConcurrentQueue<int> PointCounts { get; } = new();
+    // The points each capture was asked for, in order.
+    public ConcurrentQueue<CapturePoint[]> PointsAsked { get; } = new();
     // Colors carry the number of the capture that produced them, to tell old colors from new ones.
     public bool StampColors;
 
@@ -102,6 +104,7 @@ internal sealed class FakeCapturer : IScreenCapturer
             int capture = Interlocked.Increment(ref Captures);
             LastPointCount = points.Count;
             PointCounts.Enqueue(points.Count);
+            PointsAsked.Enqueue(points.ToArray());
             var colors = new Rgb10[points.Count + ExtraColors];
             for (int i = 0; i < colors.Length; i++)
                 colors[i] = StampColors ? new Rgb10(capture, capture, capture) : new Rgb10(i * 64, i * 64, i * 64);

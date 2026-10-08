@@ -36,6 +36,39 @@ public class CaptureLayoutTests
             edges);
     }
 
+    [Theory]
+    [InlineData(4, 4, 3, 3)]
+    [InlineData(16, 16, 12, 12)]
+    [InlineData(1, 0, 0, 0)]
+    [InlineData(0, 5, 0, 2)]
+    [InlineData(3, 0, 0, 0)]
+    public void The_spread_order_visits_every_point_once(int top, int bottom, int left, int right)
+    {
+        var layout = new CaptureLayout(top, bottom, left, right);
+
+        Assert.Equal(Enumerable.Range(0, layout.Points.Length), layout.SpreadOrder.OrderBy(index => index));
+    }
+
+    [Fact]
+    public void The_spread_order_pairs_points_from_different_edges()
+    {
+        var layout = CaptureLayout.Default;
+        var edges = layout.SpreadOrder.Select(index => layout.Points[index].Edge).ToArray();
+
+        for (int i = 0; i + 1 < edges.Length; i += 2)
+            Assert.NotEqual(edges[i], edges[i + 1]);
+    }
+
+    [Fact]
+    public void The_spread_order_does_not_walk_along_an_edge()
+    {
+        // Sixteen points on one edge: neighbors in the order are never neighbors on the screen.
+        int[] order = new CaptureLayout(16, 0, 0, 0).SpreadOrder;
+
+        for (int i = 0; i + 1 < order.Length; i++)
+            Assert.True(Math.Abs(order[i] - order[i + 1]) > 1, order[i] + " then " + order[i + 1]);
+    }
+
     [Fact]
     public void Top_and_bottom_run_left_to_right_evenly_spaced()
     {

@@ -96,10 +96,30 @@ public class CaptureZonesLoopTests
         PreviewFrame frame = await setup.Service.GetPreviewAsync(TimeSpan.FromSeconds(3));
         await setup.Service.StopAsync();
 
-        // Each half was captured together, and one of them one capture later than the other.
-        Assert.Equal(frame.Colors[0].R, frame.Colors[1].R);
-        Assert.Equal(frame.Colors[2].R, frame.Colors[3].R);
-        Assert.Equal(1, Math.Abs(frame.Colors[0].R - frame.Colors[2].R));
+        // Each batch was captured together, and one of them one capture later than the other.
+        int[] order = frame.Layout.SpreadOrder;
+        Assert.Equal(frame.Colors[order[0]].R, frame.Colors[order[1]].R);
+        Assert.Equal(frame.Colors[order[2]].R, frame.Colors[order[3]].R);
+        Assert.Equal(1, Math.Abs(frame.Colors[order[0]].R - frame.Colors[order[2]].R));
+    }
+
+    [Fact]
+    public async Task Batches_follow_the_spread_order_of_the_layout()
+    {
+        using var server = new FakeHyperionServer();
+        var setup = new Setup(server);
+        setup.Capturer.BatchSize = 2;
+        CaptureLayout layout = CaptureLayout.Default;
+        setup.Options.Layout = layout;
+
+        await setup.Service.StartAsync();
+        await TestHelpers.WaitUntilAsync(() => setup.Capturer.Captures >= 8);
+        await setup.Service.StopAsync();
+
+        // After the whole frame, seven batches of two cover the fourteen points in spread order.
+        var asked = setup.Capturer.PointsAsked.Skip(1).Take(7).SelectMany(points => points).ToArray();
+        var expected = layout.SpreadOrder.Select(index => layout.Points[index]).ToArray();
+        Assert.Equal(expected.Select(point => (point.X, point.Y)), asked.Select(point => (point.X, point.Y)));
     }
 
     [Fact]

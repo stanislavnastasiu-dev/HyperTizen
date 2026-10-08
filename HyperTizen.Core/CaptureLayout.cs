@@ -55,6 +55,35 @@ namespace HyperTizen.Core
             for (int i = 0; i < bottom; i++) points[next++] = new CapturePoint((i + 0.5) / bottom, 1 - Inset, Edge.Bottom);
             for (int i = 0; i < left; i++) points[next++] = new CapturePoint(Inset, (i + 0.5) / left, Edge.Left);
             Points = points;
+            SpreadOrder = Spread(top, right, bottom, left);
+        }
+
+        private static int[] Spread(int top, int right, int bottom, int left)
+        {
+            // The points once around the screen: top and right as they are stored, bottom and
+            // left backwards.
+            int count = top + right + bottom + left;
+            var around = new int[count];
+            int next = 0;
+            for (int i = 0; i < top + right; i++) around[next++] = i;
+            for (int i = bottom - 1; i >= 0; i--) around[next++] = top + right + i;
+            for (int i = left - 1; i >= 0; i--) around[next++] = top + right + bottom + i;
+
+            // Counting with the bits reversed halves the gaps again and again: 0, 8, 4, 12, 2, ...
+            // of sixteen. Numbers past the end are skipped.
+            int bits = 0;
+            while (1 << bits < count) bits++;
+
+            var order = new int[count];
+            next = 0;
+            for (int i = 0; i < 1 << bits; i++)
+            {
+                int reversed = 0;
+                for (int bit = 0; bit < bits; bit++)
+                    if ((i & (1 << bit)) != 0) reversed |= 1 << (bits - 1 - bit);
+                if (reversed < count) order[next++] = around[reversed];
+            }
+            return order;
         }
 
         public int Top { get; }
@@ -64,6 +93,11 @@ namespace HyperTizen.Core
 
         // One point per zone. Do not change the array.
         public CapturePoint[] Points { get; }
+
+        // Every index into Points once, in an order that jumps around the screen. Measuring a few
+        // points at a time in this order spreads a change of picture over all edges at once
+        // instead of letting it travel around the screen.
+        public int[] SpreadOrder { get; }
 
         public static bool IsValid(int top, int bottom, int left, int right)
         {
