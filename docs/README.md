@@ -18,9 +18,9 @@ A Samsung TV only accepts packages signed with a Samsung certificate that lists 
 
 4. Sign the package with your profile (see [Resigning the package](#resigning-the-package)).
 
-5. Install the package:
+5. Install the signed package, the one the previous step wrote to its output folder, not the download:
 ```bash
-tizen install -n path/to/io.gh.reisxd.HyperTizen.tpk
+tizen install -n path/to/output/dir/io.gh.reisxd.HyperTizen-<version>.tpk
 ```
 
 Note that `tizen` is in `C:\tizen-studio\tools\ide\bin` on Windows and in `~/tizen-studio/tools/ide/bin` on Linux.
@@ -29,7 +29,7 @@ If you get `install failed[118, -12], reason: Check certificate error` error, th
 
 6. Add the UI, in one of two ways:
 
-   - **As a TizenBrew module.** Install TizenBrew to your TV by following [this](https://github.com/reisxd/TizenBrew/blob/main/docs/README.md) guide, then add `stanislavnastasiu-dev/HyperTizen/HyperTizenUI` as a GitHub module to the module manager. You can access the module manager by pressing the [GREEN] button on the remote.
+   - **As a TizenBrew module.** Install TizenBrew to your TV by following [this](https://github.com/reisxd/TizenBrew/blob/main/docs/README.md) guide, then add `stanislavnastasiu-dev/HyperTizen/HyperTizenUI` as a GitHub module to the module manager. You can access the module manager by pressing the [GREEN] button on the remote. The module is taken from the newest version tag of this repository, so it matches the latest release.
    - **As a TV app.** Download `HyperTizenUI-<version>.wgt` from the same release, then sign and install it like the service (see below).
 
 The release of the original project, [reisxd/HyperTizen](https://github.com/reisxd/HyperTizen/releases), does not include what this fork adds (the setup screens, Preview and Settings). The same goes for the HyperTizen entry in [Tizen Community Packages](https://github.com/Apps2Samsung/tizen-community-packages), a community catalogue of TV apps: it is the original project's release.
@@ -38,16 +38,16 @@ The release of the original project, [reisxd/HyperTizen](https://github.com/reis
 
 Sign the service package:
 ```bash
-tizen package -t tpk -s YourProfileName -o path/to/output/dir -- path/to/io.gh.reisxd.HyperTizen.tpk
+tizen package -t tpk -s YourProfileName -o path/to/output/dir -- path/to/io.gh.reisxd.HyperTizen-<version>.tpk
 
 # Example:
-# tizen package -t tpk -s HyperTizen -o release -- io.gh.reisxd.HyperTizen.tpk
+# tizen package -t tpk -s HyperTizen -o release -- io.gh.reisxd.HyperTizen-1.1.0.tpk
 ```
 
 Sign and install the UI package, if you are not using the TizenBrew module:
 ```bash
-tizen package -t wgt -s YourProfileName -o path/to/output/dir -- path/to/HyperTizenUI.wgt
-tizen install -n path/to/output/dir/HyperTizenUI.wgt
+tizen package -t wgt -s YourProfileName -o path/to/output/dir -- path/to/HyperTizenUI-<version>.wgt
+tizen install -n path/to/output/dir/HyperTizenUI-<version>.wgt
 ```
 
 # Development

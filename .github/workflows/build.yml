@@ -39,10 +39,7 @@ jobs:
       - name: Collect the packages
         shell: pwsh
         run: |
-          $version = ([xml](Get-Content HyperTizen/tizen-manifest.xml -Raw)).manifest.version
-          New-Item -ItemType Directory -Force packages | Out-Null
-          Copy-Item HyperTizen/bin/Release/tizen90/*.tpk packages/
-          ./scripts/package-ui.ps1 -Output "packages/HyperTizenUI-$version.wgt"
+          ./scripts/collect-packages.ps1 -Output packages
           Get-ChildItem packages
 
       - uses: actions/upload-artifact@v4
@@ -73,8 +70,10 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        # Both files are named: a missing one stops the release instead of publishing half of it.
         run: |
-          gh release create "$GITHUB_REF_NAME" packages/* \
+          gh release create "$GITHUB_REF_NAME" packages/*.tpk packages/*.wgt \
             --title "HyperTizen $GITHUB_REF_NAME" \
             --notes-file .github/release-notes.md \
             --generate-notes

@@ -147,6 +147,36 @@ try {
         & $shell -NoProfile -File $checkVersion -Tag 'v0.0.0-never' 2>&1 | Out-Null
         Assert-Equal 1 $LASTEXITCODE
     }
+
+    Check 'check-version tells how to delete a rejected tag, which TizenBrew would otherwise serve' {
+        Assert-Rejected 'v1.2.0' (New-Source '1.1.0' '1.1.0') 'git push origin :refs/tags/v1.2.0'
+    }
+
+    $collect = Join-Path $PSScriptRoot 'collect-packages.ps1'
+
+    Check 'collect-packages fails when the build produced no service package' {
+        $message = $null
+        try {
+            & $collect -Output (Join-Path $work 'none') -Root (New-Source '1.1.0' '1.1.0')
+        } catch {
+            $message = "$_"
+        }
+        if ($message -notlike '*found 0*') { throw "expected a failure naming what was found, got: $message" }
+        if (Test-Path (Join-Path $work 'none')) { throw 'packages were written although the service package is missing' }
+    }
+
+    Check 'collect-packages gathers the service package and the UI package, named by version' {
+        $source = New-Source '1.1.0' '1.1.0'
+        $built = Join-Path $source 'HyperTizen/bin/Release/tizen90'
+        New-Item -ItemType Directory -Force $built | Out-Null
+        Set-Content (Join-Path $built 'io.gh.reisxd.HyperTizen-1.1.0.tpk') 'service'
+        Set-Content (Join-Path $built 'io.gh.reisxd.HyperTizen-1.0.0.tpk') 'left over from an older build'
+
+        $output = Join-Path $work 'collected'
+        & $collect -Output $output -Root $source
+        $names = @(Get-ChildItem $output | ForEach-Object { $_.Name } | Sort-Object)
+        Assert-Equal 'HyperTizenUI-1.1.0.wgt|io.gh.reisxd.HyperTizen-1.1.0.tpk' ($names -join '|')
+    }
     # --- end
 } finally {
     Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
