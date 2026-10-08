@@ -40,3 +40,41 @@ tizen package -t tpk -s YourProfileName -o path/to/output/dir -- path/to/io.gh.r
 ```
 
 4. You should now be able to install the package.
+
+# Development
+
+The solution has four projects:
+
+- `HyperTizen.Core`: the service logic (control server, Hyperion client, capture loop, image encoding).
+- `HyperTizen`: the TV service. It only runs on a TV.
+- `HyperTizen.Desktop`: runs the same logic on your PC with simulated screen colors.
+- `HyperTizen.Core.Tests`: tests for the core library.
+
+## Running on your PC
+
+Open `HyperTizen.sln`, right-click `HyperTizen.Desktop`, choose **Set as Startup Project** (needed once), select the **Desktop** profile and press F5. From a terminal:
+
+```bash
+dotnet run --project HyperTizen.Desktop
+```
+
+The control server listens on `ws://127.0.0.1:8086`. Colors are a simulated rainbow; everything else, including the connection to Hyperion / HyperHDR, is real. Settings are stored in `%LOCALAPPDATA%\HyperTizen\settings.json`.
+
+Run the tests with:
+
+```bash
+dotnet test HyperTizen.Core.Tests
+```
+
+## Running on the TV
+
+1. Install Tizen Studio and create a certificate profile as described in [Resigning the package](#resigning-the-package).
+2. Put the TV in developer mode with your PC's IP address.
+3. Copy `tv.local.example.json` to `tv.local.json` and set `tvIp` and `signingProfile` (and `tizenStudioPath` if Tizen Studio is not in `C:\tizen-studio`).
+4. Select the **TV** profile and press F5, or run:
+
+```bash
+powershell -File scripts/deploy-tv.ps1
+```
+
+The script builds, signs, installs and starts the service, checks that port 8086 answers, then shows the TV log.

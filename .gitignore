@@ -6,3 +6,4 @@ bin
 *.csproj.user
 .sign
 *.wgt
+tv.local.json

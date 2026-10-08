@@ -2,6 +2,12 @@
   "profiles": {
     "Desktop": {
       "commandName": "Project"
+    },
+    "TV": {
+      "commandName": "Executable",
+      "executablePath": "powershell.exe",
+      "commandLineArgs": "-NoProfile -ExecutionPolicy Bypass -File \"$(ProjectDir)..\\scripts\\deploy-tv.ps1\"",
+      "workingDirectory": "$(ProjectDir).."
     }
   }
 }
