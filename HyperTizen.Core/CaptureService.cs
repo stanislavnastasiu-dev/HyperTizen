@@ -54,6 +54,7 @@ namespace HyperTizen.Core
         private readonly object _timingGate = new object();
         private readonly Queue<long> _sentAt = new Queue<long>();
         private int _lastFrameMs;
+        private long _lastSentAt;
         private volatile int _lastFrameTick;
         private volatile int _support = SupportUnknown;
         private volatile bool _paused;
@@ -110,7 +111,8 @@ namespace HyperTizen.Core
             }
         }
 
-        // Frames sent per second over the last few seconds.
+        // Frames sent per second, measured across the frames of the last few seconds. Counting them
+        // against the whole window instead would read too low just after capture starts.
         public double Fps
         {
             get
@@ -118,7 +120,9 @@ namespace HyperTizen.Core
                 lock (_timingGate)
                 {
                     ForgetOldFrames();
-                    return Math.Round(_sentAt.Count * 1000.0 / TimingWindowMs, 1);
+                    if (_sentAt.Count < 2) return 0;
+                    long span = _lastSentAt - _sentAt.Peek();
+                    return span <= 0 ? 0 : Math.Round((_sentAt.Count - 1) * 1000.0 / span, 1);
                 }
             }
         }
@@ -309,7 +313,8 @@ namespace HyperTizen.Core
             lock (_timingGate)
             {
                 _lastFrameMs = frameMs;
-                _sentAt.Enqueue(Clock.ElapsedMilliseconds);
+                _lastSentAt = Clock.ElapsedMilliseconds;
+                _sentAt.Enqueue(_lastSentAt);
                 ForgetOldFrames();
             }
         }

@@ -87,6 +87,22 @@ public class CaptureZonesLoopTests
     }
 
     [Fact]
+    public async Task The_rate_is_right_from_the_first_frames_on()
+    {
+        using var server = new FakeHyperionServer();
+        var setup = new Setup(server);
+        setup.Options.MaxFps = 10;
+
+        await setup.Service.StartAsync();
+        // Well under the five seconds the rate looks back over.
+        await TestHelpers.WaitUntilAsync(() => Images(server) >= 5);
+        double fps = setup.Service.Fps;
+        await setup.Service.StopAsync();
+
+        Assert.InRange(fps, 5.0, 15.0);
+    }
+
+    [Fact]
     public async Task A_preview_carries_the_layout_its_colors_were_captured_with()
     {
         using var server = new FakeHyperionServer();
