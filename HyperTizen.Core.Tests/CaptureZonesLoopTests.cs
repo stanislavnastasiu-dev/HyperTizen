@@ -136,6 +136,26 @@ public class CaptureZonesLoopTests
     }
 
     [Fact]
+    public async Task A_preview_that_timed_out_is_picked_up_by_the_next_request()
+    {
+        using var server = new FakeHyperionServer();
+        var setup = new Setup(server);
+        // A capture slower than one request waits for, as with many zones on a slow TV.
+        setup.Capturer.Gate = new ManualResetEventSlim(false);
+
+        PreviewFrame first = await setup.Service.GetPreviewAsync(TimeSpan.FromMilliseconds(100));
+        Assert.Null(first.Colors);
+
+        Task<PreviewFrame> second = setup.Service.GetPreviewAsync(TimeSpan.FromSeconds(3));
+        await Task.Delay(50);
+        setup.Capturer.Gate.Set();
+        PreviewFrame frame = await second;
+
+        Assert.NotNull(frame.Colors);
+        Assert.Equal(1, setup.Capturer.Captures);
+    }
+
+    [Fact]
     public async Task A_preview_without_colors_has_no_layout()
     {
         using var server = new FakeHyperionServer();

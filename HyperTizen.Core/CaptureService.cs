@@ -231,13 +231,17 @@ namespace HyperTizen.Core
                     : new PreviewFrame(null, null, NotReturningColors);
             }
 
-            var outstanding = _oneShot;
-            if (outstanding != null && !outstanding.IsCompleted) return new PreviewFrame(null, null, NotReturningColors);
             var stuck = _stuckLoop;
             if (stuck != null && !stuck.IsCompleted) return new PreviewFrame(null, null, NotReturningColors);
 
-            Task<PreviewFrame> capture = Task.Run(() => CaptureOnce());
-            _oneShot = capture;
+            // A capture still running from an earlier request is waited for, not started again:
+            // with many zones one capture can take longer than a single request waits.
+            Task<PreviewFrame> capture = _oneShot;
+            if (capture == null || capture.IsCompleted)
+            {
+                capture = Task.Run(() => CaptureOnce());
+                _oneShot = capture;
+            }
             if (!await CompletesWithinAsync(capture, timeout).ConfigureAwait(false))
                 return new PreviewFrame(null, null, NotReturningColors);
 

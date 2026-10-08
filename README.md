@@ -24,19 +24,19 @@ This repository is a fork of [reisxd/HyperTizen](https://github.com/reisxd/Hyper
 <table>
   <tr>
     <td width="50%"><img src="docs/images/setup.png" alt="Setup step 1: choose your Hyperion or HyperHDR server" /></td>
-    <td width="50%"><img src="docs/images/preview.png" alt="Preview: sixteen colored points around the edge of the screen" /></td>
+    <td width="50%"><img src="docs/images/preview.png" alt="Preview: one colored point per capture zone, around the edge of the screen" /></td>
   </tr>
   <tr>
     <td align="center">Setup, step 1 of 3</td>
     <td align="center">Preview of the captured colors</td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/settings.png" alt="Settings: frame rate limit, priority, forget server" /></td>
-    <td width="50%"><img src="docs/images/home.png" alt="Home screen" /></td>
+    <td width="50%"><img src="docs/images/settings.png" alt="Settings: frame rate limit, priority, capture zones, forget server" /></td>
+    <td width="50%"><img src="docs/images/zones.png" alt="Capture zones: a count for the top, bottom, left and right edge, and the time a frame takes" /></td>
   </tr>
   <tr>
     <td align="center">Settings</td>
-    <td align="center">Home</td>
+    <td align="center">Capture zones</td>
   </tr>
 </table>
 

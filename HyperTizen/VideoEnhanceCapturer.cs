@@ -139,10 +139,8 @@ namespace HyperTizen
                 int batch = Math.Min(_condition.ScreenCapturePoints, points.Count - i);
                 for (int j = 0; j < batch; j++)
                 {
-                    int x = (int)(points[i + j].X * (double)_condition.Width) - _condition.PixelDensityX / 2;
-                    int y = (int)(points[i + j].Y * (double)_condition.Height) - _condition.PixelDensityY / 2;
-                    x = (x >= _condition.Width - _condition.PixelDensityX) ? _condition.Width - (_condition.PixelDensityX + 1) : x;
-                    y = (y >= _condition.Height - _condition.PixelDensityY) ? (_condition.Height - _condition.PixelDensityY + 1) : y;
+                    int x = CaptureGeometry.Origin(points[i + j].X, _condition.Width, _condition.PixelDensityX);
+                    int y = CaptureGeometry.Origin(points[i + j].Y, _condition.Height, _condition.PixelDensityY);
 
                     int res = _api.Position(j, x, y);
                     if (res < 0) throw new InvalidOperationException("Setting capture point " + (i + j) + " failed with " + res + ".");
