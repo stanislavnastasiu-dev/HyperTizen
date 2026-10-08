@@ -56,6 +56,8 @@ Up to 1.1.0 the colors along the bottom edge and the left edge were sent in reve
 
 The service now measures 14 places by default instead of 16 (the two in the middle of the screen never reached the LEDs). You can change the number of zones per edge under Settings, Capture zones. That screen and Home show how long a frame takes and how many are sent per second, so you can see what a setting costs.
 
+From 1.1.2 the LEDs are updated more often. A TV measures only a few places at a time and waits between them, so the service now sends after each of those steps instead of once all places are measured. The timing shown is that of one step; every zone is still measured once per round, and a round takes longer the more zones there are.
+
 # Development
 
 There are four projects:
