@@ -19,5 +19,10 @@ namespace HyperTizen
         {
             Preference.Set(key, value);
         }
+
+        public void Remove(string key)
+        {
+            if (Preference.Contains(key)) Preference.Remove(key);
+        }
     }
 }

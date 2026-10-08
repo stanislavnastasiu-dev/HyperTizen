@@ -8,7 +8,14 @@ namespace HyperTizen.Core
         ReadConfig,
         ReadConfigResult,
         ScanSSDP,
-        SSDPScanResult
+        SSDPScanResult,
+        GetStatus,
+        StatusResult,
+        TestLeds,
+        TestLedsResult,
+        GetPreview,
+        PreviewResult,
+        DeleteConfig
     }
 
     public class BasicEvent
@@ -23,6 +30,11 @@ namespace HyperTizen.Core
     }
 
     public class ReadConfigEvent : BasicEvent
+    {
+        public string key { get; set; }
+    }
+
+    public class DeleteConfigEvent : BasicEvent
     {
         public string key { get; set; }
     }
@@ -65,24 +77,89 @@ namespace HyperTizen.Core
         }
     }
 
+    public class StatusResultEvent : BasicEvent
+    {
+        public StatusResultEvent()
+        {
+            this.Event = Event.StatusResult;
+        }
+
+        public string version { get; set; }
+        public bool enabled { get; set; }
+        public string rpcServer { get; set; }
+        public bool connected { get; set; }
+        // "running", "stopped", "unsupported" or "unknown"
+        public string capture { get; set; }
+        public string lastError { get; set; }
+    }
+
+    public class TestLedsResultEvent : BasicEvent
+    {
+        public TestLedsResultEvent(bool ok, string error)
+        {
+            this.Event = Event.TestLedsResult;
+            this.ok = ok;
+            this.error = error;
+        }
+
+        public bool ok { get; set; }
+        public string error { get; set; }
+    }
+
+    public class PreviewResultEvent : BasicEvent
+    {
+        public PreviewResultEvent(bool ok, int[][] colors, string error)
+        {
+            this.Event = Event.PreviewResult;
+            this.ok = ok;
+            this.colors = colors;
+            this.error = error;
+        }
+
+        public bool ok { get; set; }
+        // One [r, g, b] per capture point, each 0..255.
+        public int[][] colors { get; set; }
+        public string error { get; set; }
+    }
+
     public class ImageCommand
     {
-        public ImageCommand(string image)
+        public ImageCommand(string image, byte priority = 99)
         {
             imagedata = image;
+            this.priority = priority;
         }
 
         public string command { get; set; } = "image";
         public string imagedata { get; set; }
         public string name { get; set; } = "HyperTizen Data";
         public string format { get; set; } = "auto";
-        public byte priority { get; set; } = 99;
+        public byte priority { get; set; }
         public string origin { get; set; } = "HyperTizen";
     }
 
     public class ClearCommand
     {
+        public ClearCommand(byte priority = 99)
+        {
+            this.priority = priority;
+        }
+
         public string command { get; set; } = "clear";
-        public byte priority { get; set; } = 99;
+        public byte priority { get; set; }
+    }
+
+    public class ColorCommand
+    {
+        public ColorCommand(int r, int g, int b, byte priority)
+        {
+            color = new[] { r, g, b };
+            this.priority = priority;
+        }
+
+        public string command { get; set; } = "color";
+        public int[] color { get; set; }
+        public byte priority { get; set; }
+        public string origin { get; set; } = "HyperTizen";
     }
 }

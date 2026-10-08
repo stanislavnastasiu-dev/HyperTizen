@@ -33,9 +33,22 @@ public sealed class JsonFileSettingsStore : ISettingsStore
         lock (_gate)
         {
             _values[key] = value;
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_path))!);
-            File.WriteAllText(_path, JsonSerializer.Serialize(_values, WriteOptions));
+            Save();
         }
+    }
+
+    public void Remove(string key)
+    {
+        lock (_gate)
+        {
+            if (_values.Remove(key)) Save();
+        }
+    }
+
+    private void Save()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_path))!);
+        File.WriteAllText(_path, JsonSerializer.Serialize(_values, WriteOptions));
     }
 
     private static Dictionary<string, string> Load(string path)

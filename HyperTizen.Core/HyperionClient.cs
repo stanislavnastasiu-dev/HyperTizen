@@ -23,12 +23,12 @@ namespace HyperTizen.Core
         private readonly object _gate = new object();
         private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1);
 
-        private string _uri;
+        private volatile string _uri;
         private volatile ClientWebSocket _socket;
         private volatile bool _closing;
         private CancellationTokenSource _stop;
         private CancellationTokenSource _attempt;
-        private Task _loop;
+        private volatile Task _loop;
 
         public HyperionClient(ILog log, TimeSpan[] backoff = null)
         {
@@ -43,6 +43,16 @@ namespace HyperTizen.Core
                 var socket = _socket;
                 return socket != null && socket.State == WebSocketState.Open;
             }
+        }
+
+        public bool IsStarted
+        {
+            get { return _loop != null; }
+        }
+
+        public bool HasServer
+        {
+            get { return _uri != null; }
         }
 
         public void SetServer(string uri)
@@ -112,14 +122,19 @@ namespace HyperTizen.Core
             stop.Dispose();
         }
 
-        public Task<bool> SendImageAsync(string base64Png)
+        public Task<bool> SendImageAsync(string base64Png, byte priority = 99)
         {
-            return SendAsync(JsonConvert.SerializeObject(new ImageCommand(base64Png)));
+            return SendAsync(JsonConvert.SerializeObject(new ImageCommand(base64Png, priority)));
         }
 
-        public Task<bool> SendClearAsync()
+        public Task<bool> SendClearAsync(byte priority = 99)
         {
-            return SendAsync(JsonConvert.SerializeObject(new ClearCommand()));
+            return SendAsync(JsonConvert.SerializeObject(new ClearCommand(priority)));
+        }
+
+        public Task<bool> SendColorAsync(int r, int g, int b, byte priority = 99)
+        {
+            return SendAsync(JsonConvert.SerializeObject(new ColorCommand(r, g, b, priority)));
         }
 
         private async Task<bool> SendAsync(string json)

@@ -31,6 +31,9 @@ namespace HyperTizen.Core
         bool Contains(string key);
         string Get(string key);
         void Set(string key, string value);
+
+        // Does nothing when the key is absent.
+        void Remove(string key);
     }
 
     public interface ILog

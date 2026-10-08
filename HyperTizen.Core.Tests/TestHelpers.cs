@@ -47,6 +47,7 @@ internal sealed class MemorySettingsStore : ISettingsStore
     public bool Contains(string key) => _values.ContainsKey(key);
     public string Get(string key) => _values[key];
     public void Set(string key, string value) => _values[key] = value;
+    public void Remove(string key) => _values.TryRemove(key, out _);
 }
 
 internal sealed class FakeCapturer : IScreenCapturer
