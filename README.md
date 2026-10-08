@@ -14,7 +14,8 @@ This repository is a fork of [reisxd/HyperTizen](https://github.com/reisxd/Hyper
 - **Guided setup on the TV.** Three steps with the remote: choose your server (found on the network, or typed in), check that the LEDs light up, turn it on.
 - **A Home screen that says what is happening.** Service, server and capture each show their state, with the last error when something is wrong.
 - **Preview.** See the colors the TV is capturing, placed where they are measured on the screen.
-- **Settings.** Frame rate limit, Hyperion priority, and forgetting the server.
+- **Settings.** Frame rate limit (any value up to 60), Hyperion priority, and forgetting the server.
+- **Capture zones you choose.** Set how many zones the top, bottom, left and right edge have: fewer for faster updates, more for finer color, none for an edge without LEDs. The TV shows how long a frame takes with your choice.
 - **Capture on newer TVs**, and 10-bit colors scaled correctly.
 - **Reconnecting.** The service finds its server again after either side restarts.
 - **Run it on your PC.** A desktop host runs the same service logic with simulated colors and serves the TV UI in a browser, so most work needs no TV.
@@ -23,19 +24,19 @@ This repository is a fork of [reisxd/HyperTizen](https://github.com/reisxd/Hyper
 <table>
   <tr>
     <td width="50%"><img src="docs/images/setup.png" alt="Setup step 1: choose your Hyperion or HyperHDR server" /></td>
-    <td width="50%"><img src="docs/images/preview.png" alt="Preview: sixteen colored points around the edge of the screen" /></td>
+    <td width="50%"><img src="docs/images/preview.png" alt="Preview: one colored point per capture zone, around the edge of the screen" /></td>
   </tr>
   <tr>
     <td align="center">Setup, step 1 of 3</td>
     <td align="center">Preview of the captured colors</td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/settings.png" alt="Settings: frame rate limit, priority, forget server" /></td>
-    <td width="50%"><img src="docs/images/home.png" alt="Home screen" /></td>
+    <td width="50%"><img src="docs/images/settings.png" alt="Settings: frame rate limit, priority, capture zones, forget server" /></td>
+    <td width="50%"><img src="docs/images/zones.png" alt="Capture zones: a count for the top, bottom, left and right edge, and the time a frame takes" /></td>
   </tr>
   <tr>
     <td align="center">Settings</td>
-    <td align="center">Home</td>
+    <td align="center">Capture zones</td>
   </tr>
 </table>
 

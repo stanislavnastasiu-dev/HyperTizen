@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using HyperTizen.Core;
@@ -38,25 +39,6 @@ namespace HyperTizen
         private Api _api;
         private Condition _condition;
         private bool _notified;
-
-        private readonly CapturePoint[] _capturedPoints = new CapturePoint[] {
-            new CapturePoint(0.21, 0.05),
-            new CapturePoint(0.45, 0.05),
-            new CapturePoint(0.7, 0.05),
-            new CapturePoint(0.93, 0.07),
-            new CapturePoint(0.95, 0.275),
-            new CapturePoint(0.95, 0.5),
-            new CapturePoint(0.95, 0.8),
-            new CapturePoint(0.79, 0.95),
-            new CapturePoint(0.65, 0.95),
-            new CapturePoint(0.35, 0.95),
-            new CapturePoint(0.15, 0.95),
-            new CapturePoint(0.05, 0.725),
-            new CapturePoint(0.05, 0.4),
-            new CapturePoint(0.05, 0.2),
-            new CapturePoint(0.35, 0.5),
-            new CapturePoint(0.65, 0.5)
-        };
 
         [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "cs_ve_get_rgb_measure_condition")]
         private static extern int ConditionCs(out Condition condition);
@@ -144,23 +126,21 @@ namespace HyperTizen
             return false;
         }
 
-        public Rgb10[] Capture()
+        public Rgb10[] Capture(IReadOnlyList<CapturePoint> points)
         {
-            Rgb10[] colorData = new Rgb10[_capturedPoints.Length];
+            Rgb10[] colorData = new Rgb10[points.Count];
 
             // The TV measures a few points at a time: set their positions, wait, then read them back.
             int i = 0;
-            while (i < _capturedPoints.Length)
+            while (i < points.Count)
             {
                 if (_condition.ScreenCapturePoints <= 0) break;
 
-                int batch = Math.Min(_condition.ScreenCapturePoints, _capturedPoints.Length - i);
+                int batch = Math.Min(_condition.ScreenCapturePoints, points.Count - i);
                 for (int j = 0; j < batch; j++)
                 {
-                    int x = (int)(_capturedPoints[i + j].X * (double)_condition.Width) - _condition.PixelDensityX / 2;
-                    int y = (int)(_capturedPoints[i + j].Y * (double)_condition.Height) - _condition.PixelDensityY / 2;
-                    x = (x >= _condition.Width - _condition.PixelDensityX) ? _condition.Width - (_condition.PixelDensityX + 1) : x;
-                    y = (y >= _condition.Height - _condition.PixelDensityY) ? (_condition.Height - _condition.PixelDensityY + 1) : y;
+                    int x = CaptureGeometry.Origin(points[i + j].X, _condition.Width, _condition.PixelDensityX);
+                    int y = CaptureGeometry.Origin(points[i + j].Y, _condition.Height, _condition.PixelDensityY);
 
                     int res = _api.Position(j, x, y);
                     if (res < 0) throw new InvalidOperationException("Setting capture point " + (i + j) + " failed with " + res + ".");
@@ -220,16 +200,5 @@ namespace HyperTizen
             public int Height;
         }
 #pragma warning restore CS0649
-
-        private struct CapturePoint
-        {
-            public CapturePoint(double x, double y) {
-                this.X = x;
-                this.Y = y;
-            }
-
-            public double X;
-            public double Y;
-        }
     }
 }

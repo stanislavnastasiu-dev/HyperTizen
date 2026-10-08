@@ -27,7 +27,7 @@ public class CapturePreviewTests
         PreviewFrame frame = await service.GetPreviewAsync(Timeout);
 
         Assert.Null(frame.Error);
-        Assert.Equal(16, frame.Colors.Length);
+        Assert.Equal(14, frame.Colors.Length);
         Assert.Equal(1, capturer.MaxConcurrent);
         await service.StopAsync();
     }
@@ -41,7 +41,7 @@ public class CapturePreviewTests
         PreviewFrame frame = await service.GetPreviewAsync(Timeout);
 
         Assert.Null(frame.Error);
-        Assert.Equal(16, frame.Colors.Length);
+        Assert.Equal(14, frame.Colors.Length);
         Assert.Equal(1, capturer.Captures);
         Assert.Equal("stopped", service.State);
         Assert.Equal(0, server.ConnectionCount);

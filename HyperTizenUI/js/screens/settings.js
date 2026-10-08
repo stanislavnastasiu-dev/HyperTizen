@@ -1,4 +1,4 @@
-// Frame rate limit, priority, and forgetting the server.
+// Frame rate limit, priority, capture zones, and forgetting the server.
 (function (root) {
   'use strict';
   const HT = root.HyperTizen = root.HyperTizen || {};
@@ -7,15 +7,20 @@
   const DEFAULT_PRIORITY = 99;
 
   HT.screens['settings'] = function (ctx) {
-    const fpsButtons = Array.prototype.slice.call(ctx.el('fps-options').querySelectorAll('button'));
+    const unlimited = ctx.el('fps-0');
+    const limited = ctx.el('fps-custom');
     const priorityValue = ctx.el('priority-value');
+    const zonesSummary = ctx.el('zones-summary');
     const forget = ctx.el('forget-server');
     const confirmation = ctx.el('forget-confirm');
     const cancel = ctx.el('forget-no');
     let priority = DEFAULT_PRIORITY;
 
     function showFps(value) {
-      fpsButtons.forEach(button => button.classList.toggle('selected', button.dataset.fps === value));
+      const limit = Number(value) || 0;
+      unlimited.classList.toggle('selected', limit === 0);
+      limited.classList.toggle('selected', limit > 0);
+      limited.textContent = limit > 0 ? String(limit) : 'Set a limit';
     }
 
     function showPriority() {
@@ -42,15 +47,32 @@
         priority = reply.error ? DEFAULT_PRIORITY : (Number(reply.value) || DEFAULT_PRIORITY);
         showPriority();
       }, () => {});
+
+      const counts = {};
+      HT.capture.ZONES.forEach(zone => { counts[zone.id] = zone.fallback; });
+      HT.capture.ZONES.forEach(zone => {
+        client.readConfig(zone.key).then(reply => {
+          counts[zone.id] = HT.capture.zoneValue(reply, zone);
+          zonesSummary.textContent = HT.capture.zoneSummary(counts);
+        }, () => {});
+      });
     }
 
-    fpsButtons.forEach(button => {
-      button.onclick = () => {
-        if (ctx.set('maxFps', button.dataset.fps)) showFps(button.dataset.fps);
-      };
+    unlimited.onclick = () => {
+      if (ctx.set('maxFps', '0')) showFps('0');
+    };
+    limited.onclick = () => ctx.router.go('number', {
+      key: 'maxFps',
+      title: 'Frame rate limit',
+      name: 'Frames per second',
+      hint: 'A whole number from 1 to 60.',
+      min: 1,
+      max: 60,
+      back: 'settings'
     });
     ctx.el('priority-down').onclick = () => changePriority(-1);
     ctx.el('priority-up').onclick = () => changePriority(1);
+    ctx.el('settings-zones').onclick = () => ctx.router.go('zones');
 
     forget.onclick = () => {
       const status = ctx.status();
@@ -76,8 +98,9 @@
         showConfirmation(false);
         showFps('0');
         showPriority();
+        zonesSummary.textContent = '';
         load();
-        fpsButtons[0].focus();
+        unlimited.focus();
       },
 
       back() {

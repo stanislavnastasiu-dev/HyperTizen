@@ -59,7 +59,7 @@ public class HyperTizenServiceStatusTests
 
         var status = await StatusAsync(ui);
 
-        Assert.Equal("1.1.0", (string?)status["version"]);
+        Assert.Equal("1.1.1", (string?)status["version"]);
         Assert.False((bool)status["enabled"]!);
         Assert.Equal(JTokenType.Null, status["rpcServer"]!.Type);
         Assert.False((bool)status["connected"]!);
@@ -158,7 +158,7 @@ public class HyperTizenServiceStatusTests
     }
 
     [Fact]
-    public async Task Preview_returns_sixteen_colors_scaled_to_bytes()
+    public async Task Preview_returns_one_color_per_zone_scaled_to_bytes()
     {
         using var fixture = new Fixture();
         await fixture.Service.StartAsync();
@@ -168,9 +168,9 @@ public class HyperTizenServiceStatusTests
 
         Assert.True((bool)result["ok"]!);
         var colors = result["colors"]!.ToObject<int[][]>()!;
-        Assert.Equal(16, colors.Length);
-        // The fake capturer's last point is 960 on the 10-bit scale.
-        Assert.Equal(new[] { 240, 240, 240 }, colors[15]);
+        Assert.Equal(14, colors.Length);
+        // The fake capturer's last point is 832 on the 10-bit scale.
+        Assert.Equal(new[] { 208, 208, 208 }, colors[13]);
         Assert.All(colors, c => Assert.All(c, channel => Assert.InRange(channel, 0, 255)));
     }
 
@@ -222,7 +222,7 @@ public class HyperTizenServiceStatusTests
     }
 
     [Theory]
-    [InlineData("maxFps", "15")]
+    [InlineData("maxFps", "61")]
     [InlineData("maxFps", "-10")]
     [InlineData("maxFps", "")]
     [InlineData("priority", "0")]

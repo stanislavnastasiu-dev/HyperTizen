@@ -1,20 +1,24 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace HyperTizen.Core
 {
-    // Result of a preview request: colors, or the reason there are none.
+    // Result of a preview request: colors and the layout they were captured with, or the reason
+    // there are none.
     public sealed class PreviewFrame
     {
-        public PreviewFrame(Rgb10[] colors, string error)
+        public PreviewFrame(Rgb10[] colors, CaptureLayout layout, string error)
         {
             Colors = colors;
+            Layout = layout;
             Error = error;
         }
 
         public Rgb10[] Colors { get; }
+        public CaptureLayout Layout { get; }
         public string Error { get; }
     }
 
@@ -42,7 +46,15 @@ namespace HyperTizen.Core
         private volatile Task _loop;
         private volatile Task _stuckLoop;
         private volatile Task<PreviewFrame> _oneShot;
-        private volatile Rgb10[] _lastFrame;
+        private volatile PreviewFrame _lastFrame;
+
+        // Timing of the frames sent lately, for the status reply.
+        private const int TimingWindowMs = 5000;
+        private static readonly Stopwatch Clock = Stopwatch.StartNew();
+        private readonly object _timingGate = new object();
+        private readonly Queue<long> _sentAt = new Queue<long>();
+        private int _lastFrameMs;
+        private long _lastSentAt;
         private volatile int _lastFrameTick;
         private volatile int _support = SupportUnknown;
         private volatile bool _paused;
@@ -82,6 +94,36 @@ namespace HyperTizen.Core
                 if (_support == Unsupported) return "unsupported";
                 if (_loop != null) return "running";
                 return _support == SupportUnknown ? "unknown" : "stopped";
+            }
+        }
+
+        // How long the latest frame took, from the start of capture to the image being sent.
+        // Null when no frame was sent in the last few seconds.
+        public int? FrameMs
+        {
+            get
+            {
+                lock (_timingGate)
+                {
+                    ForgetOldFrames();
+                    return _sentAt.Count == 0 ? (int?)null : _lastFrameMs;
+                }
+            }
+        }
+
+        // Frames sent per second, measured across the frames of the last few seconds. Counting them
+        // against the whole window instead would read too low just after capture starts.
+        public double Fps
+        {
+            get
+            {
+                lock (_timingGate)
+                {
+                    ForgetOldFrames();
+                    if (_sentAt.Count < 2) return 0;
+                    long span = _lastSentAt - _sentAt.Peek();
+                    return span <= 0 ? 0 : Math.Round((_sentAt.Count - 1) * 1000.0 / span, 1);
+                }
             }
         }
 
@@ -183,20 +225,25 @@ namespace HyperTizen.Core
                 while (!HasFreshFrame(timeout) && waited.Elapsed < timeout)
                     await Task.Delay(50).ConfigureAwait(false);
 
-                return HasFreshFrame(timeout)
-                    ? new PreviewFrame(_lastFrame, null)
-                    : new PreviewFrame(null, NotReturningColors);
+                PreviewFrame latest = _lastFrame;
+                return HasFreshFrame(timeout) && latest != null
+                    ? latest
+                    : new PreviewFrame(null, null, NotReturningColors);
             }
 
-            var outstanding = _oneShot;
-            if (outstanding != null && !outstanding.IsCompleted) return new PreviewFrame(null, NotReturningColors);
             var stuck = _stuckLoop;
-            if (stuck != null && !stuck.IsCompleted) return new PreviewFrame(null, NotReturningColors);
+            if (stuck != null && !stuck.IsCompleted) return new PreviewFrame(null, null, NotReturningColors);
 
-            Task<PreviewFrame> capture = Task.Run(() => CaptureOnce());
-            _oneShot = capture;
+            // A capture still running from an earlier request is waited for, not started again:
+            // with many zones one capture can take longer than a single request waits.
+            Task<PreviewFrame> capture = _oneShot;
+            if (capture == null || capture.IsCompleted)
+            {
+                capture = Task.Run(() => CaptureOnce());
+                _oneShot = capture;
+            }
             if (!await CompletesWithinAsync(capture, timeout).ConfigureAwait(false))
-                return new PreviewFrame(null, NotReturningColors);
+                return new PreviewFrame(null, null, NotReturningColors);
 
             try
             {
@@ -205,23 +252,22 @@ namespace HyperTizen.Core
             catch (Exception ex)
             {
                 _log.Error("Preview capture failed", ex);
-                return new PreviewFrame(null, ex.Message);
+                return new PreviewFrame(null, null, ex.Message);
             }
         }
 
         private PreviewFrame CaptureOnce()
         {
-            if (!_captureLock.Wait(TimeSpan.FromMilliseconds(500))) return new PreviewFrame(null, NotReturningColors);
+            if (!_captureLock.Wait(TimeSpan.FromMilliseconds(500))) return new PreviewFrame(null, null, NotReturningColors);
             try
             {
                 // Previews are polled; asking the device again each time would repeat its log lines and
                 // notifications. Starting capture is what checks an unsupported device again.
-                if (_support == Unsupported) return new PreviewFrame(null, NotSupported);
-                if (_support == SupportUnknown && !InitializeCapturer()) return new PreviewFrame(null, NotSupported);
+                if (_support == Unsupported) return new PreviewFrame(null, null, NotSupported);
+                if (_support == SupportUnknown && !InitializeCapturer()) return new PreviewFrame(null, null, NotSupported);
 
-                Rgb10[] colors = _capturer.Capture();
-                RememberFrame(colors);
-                return new PreviewFrame(colors, null);
+                CaptureLayout layout = _options.Layout;
+                return RememberFrame(CaptureFrame(layout), layout);
             }
             finally
             {
@@ -247,10 +293,41 @@ namespace HyperTizen.Core
             return supported;
         }
 
-        private void RememberFrame(Rgb10[] colors)
+        // The caller holds _captureLock.
+        private Rgb10[] CaptureFrame(CaptureLayout layout)
         {
-            _lastFrame = colors;
+            Rgb10[] colors = _capturer.Capture(layout.Points);
+            int returned = colors == null ? 0 : colors.Length;
+            if (returned != layout.Points.Length)
+                throw new InvalidOperationException(
+                    "The capturer returned " + returned + " colors for " + layout.Points.Length + " points.");
+            return colors;
+        }
+
+        private PreviewFrame RememberFrame(Rgb10[] colors, CaptureLayout layout)
+        {
+            var frame = new PreviewFrame(colors, layout, null);
+            _lastFrame = frame;
             _lastFrameTick = Environment.TickCount;
+            return frame;
+        }
+
+        private void RecordSent(int frameMs)
+        {
+            lock (_timingGate)
+            {
+                _lastFrameMs = frameMs;
+                _lastSentAt = Clock.ElapsedMilliseconds;
+                _sentAt.Enqueue(_lastSentAt);
+                ForgetOldFrames();
+            }
+        }
+
+        // The caller holds _timingGate.
+        private void ForgetOldFrames()
+        {
+            long oldest = Clock.ElapsedMilliseconds - TimingWindowMs;
+            while (_sentAt.Count > 0 && _sentAt.Peek() < oldest) _sentAt.Dequeue();
         }
 
         private bool HasFreshFrame(TimeSpan maxAge)
@@ -278,17 +355,19 @@ namespace HyperTizen.Core
                     }
 
                     var frameTime = Stopwatch.StartNew();
+                    // Read once: the whole frame uses the layout it started with.
+                    CaptureLayout layout = _options.Layout;
                     Rgb10[] colors;
                     await _captureLock.WaitAsync(cancellation).ConfigureAwait(false);
                     try
                     {
-                        colors = _capturer.Capture();
+                        colors = CaptureFrame(layout);
                     }
                     finally
                     {
                         _captureLock.Release();
                     }
-                    RememberFrame(colors);
+                    RememberFrame(colors, layout);
                     if (_paused) continue;
 
                     // A priority change leaves the last image at the old priority; remove it first.
@@ -297,8 +376,11 @@ namespace HyperTizen.Core
                         await _client.SendClearAsync((byte)lastPriority).ConfigureAwait(false);
                     lastPriority = priority;
 
-                    if (await _client.SendImageAsync(FrameEncoder.ToBase64Png(colors), priority).ConfigureAwait(false))
+                    if (await _client.SendImageAsync(FrameEncoder.ToBase64Png(colors, layout), priority).ConfigureAwait(false))
+                    {
+                        RecordSent((int)frameTime.ElapsedMilliseconds);
                         _onFrameSent?.Invoke();
+                    }
 
                     int maxFps = _options.MaxFps;
                     if (maxFps > 0)

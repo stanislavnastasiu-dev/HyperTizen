@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   const HT = root.HyperTizen;
-  HT.uiVersion = '1.1.0';
+  HT.uiVersion = '1.1.1';
 
   const SERVICE_APP_ID = 'io.gh.reisxd.HyperTizen';
   const ARROWS = { 37: 'left', 38: 'up', 39: 'right', 40: 'down' };

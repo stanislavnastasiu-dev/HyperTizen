@@ -105,7 +105,7 @@
                 <div class="tile">
                     <span class="tile-name">Capture</span>
                     <span id="tile-capture" class="tile-value"></span>
-                    <span class="tile-detail">&nbsp;</span>
+                    <span id="tile-timing" class="tile-detail">&nbsp;</span>
                 </div>
             </div>
             <p id="home-error" class="error" hidden></p>
@@ -134,10 +134,8 @@
             <div class="setting">
                 <span class="setting-name">Frame rate limit</span>
                 <div id="fps-options" class="row">
-                    <button id="fps-0" class="focusable option" data-fps="0">Unlimited</button>
-                    <button id="fps-30" class="focusable option" data-fps="30">30</button>
-                    <button id="fps-20" class="focusable option" data-fps="20">20</button>
-                    <button id="fps-10" class="focusable option" data-fps="10">10</button>
+                    <button id="fps-0" class="focusable option">Unlimited</button>
+                    <button id="fps-custom" class="focusable option">Set a limit</button>
                 </div>
             </div>
             <div class="setting">
@@ -146,6 +144,13 @@
                     <button id="priority-down" class="focusable option">-</button>
                     <span id="priority-value" class="stepper-value">99</span>
                     <button id="priority-up" class="focusable option">+</button>
+                </div>
+            </div>
+            <div class="setting">
+                <span class="setting-name">Capture zones</span>
+                <div class="row">
+                    <button id="settings-zones" class="focusable">Change</button>
+                    <span id="zones-summary"></span>
                 </div>
             </div>
             <div class="setting">
@@ -161,6 +166,61 @@
             </div>
             <p id="about" class="hint"></p>
         </section>
+        <section id="screen-zones" class="screen" hidden>
+            <h2>Capture zones</h2>
+            <div class="setting">
+                <span class="setting-name">Top zones</span>
+                <div class="row">
+                    <button id="zones-top-down" class="focusable option">-</button>
+                    <span id="zones-top-value" class="stepper-value">4</span>
+                    <button id="zones-top-up" class="focusable option">+</button>
+                </div>
+            </div>
+            <div class="setting">
+                <span class="setting-name">Bottom zones</span>
+                <div class="row">
+                    <button id="zones-bottom-down" class="focusable option">-</button>
+                    <span id="zones-bottom-value" class="stepper-value">4</span>
+                    <button id="zones-bottom-up" class="focusable option">+</button>
+                </div>
+            </div>
+            <div class="setting">
+                <span class="setting-name">Left zones</span>
+                <div class="row">
+                    <button id="zones-left-down" class="focusable option">-</button>
+                    <span id="zones-left-value" class="stepper-value">3</span>
+                    <button id="zones-left-up" class="focusable option">+</button>
+                </div>
+            </div>
+            <div class="setting">
+                <span class="setting-name">Right zones</span>
+                <div class="row">
+                    <button id="zones-right-down" class="focusable option">-</button>
+                    <span id="zones-right-value" class="stepper-value">3</span>
+                    <button id="zones-right-up" class="focusable option">+</button>
+                </div>
+            </div>
+            <p id="zones-timing" class="hint"></p>
+            <p class="hint">More zones show more distinct colors but take longer to measure. An edge with 0 zones stays dark.</p>
+        </section>
+        <section id="screen-number" class="screen" hidden>
+            <h2 id="number-title"></h2>
+            <div class="keypad-layout">
+                <div class="fields">
+                    <div class="field active">
+                        <span id="number-name" class="field-name"></span>
+                        <span id="number-value" class="field-value"></span>
+                    </div>
+                    <p id="number-hint" class="hint"></p>
+                </div>
+                <div>
+                    <div id="number-keys" class="keypad"></div>
+                    <div class="row">
+                        <button id="number-ok" class="focusable primary" disabled>OK</button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Samsung TV APIs (the TV's own network address). Absent in a PC browser, where it is not needed. -->
@@ -170,12 +230,15 @@
     <script src="js/protocol.js"></script>
     <script src="js/router.js"></script>
     <script src="js/connection.js"></script>
+    <script src="js/capture.js"></script>
     <script src="js/screens/connecting.js"></script>
     <script src="js/screens/setup.js"></script>
     <script src="js/screens/keypad.js"></script>
     <script src="js/screens/home.js"></script>
     <script src="js/screens/preview.js"></script>
     <script src="js/screens/settings.js"></script>
+    <script src="js/screens/zones.js"></script>
+    <script src="js/screens/number.js"></script>
     <script src="js/app.js"></script>
 </body>
 

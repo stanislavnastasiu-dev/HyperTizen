@@ -91,6 +91,10 @@ namespace HyperTizen.Core
         // "running", "stopped", "unsupported" or "unknown"
         public string capture { get; set; }
         public string lastError { get; set; }
+        // Milliseconds the latest frame took; null when no frame was sent lately.
+        public int? frameMs { get; set; }
+        // Frames sent per second over the last few seconds.
+        public double fps { get; set; }
     }
 
     public class TestLedsResultEvent : BasicEvent
@@ -108,18 +112,37 @@ namespace HyperTizen.Core
 
     public class PreviewResultEvent : BasicEvent
     {
-        public PreviewResultEvent(bool ok, int[][] colors, string error)
+        public PreviewResultEvent(bool ok, int[][] colors, string error, PreviewPoint[] points = null)
         {
             this.Event = Event.PreviewResult;
             this.ok = ok;
             this.colors = colors;
             this.error = error;
+            this.points = points;
         }
 
         public bool ok { get; set; }
         // One [r, g, b] per capture point, each 0..255.
         public int[][] colors { get; set; }
         public string error { get; set; }
+        // Where each color was measured, in the same order as colors.
+        public PreviewPoint[] points { get; set; }
+    }
+
+    public class PreviewPoint
+    {
+        public PreviewPoint(double x, double y, string edge)
+        {
+            this.x = x;
+            this.y = y;
+            this.edge = edge;
+        }
+
+        // 0..1 of the screen width and height.
+        public double x { get; set; }
+        public double y { get; set; }
+        // "top", "right", "bottom" or "left".
+        public string edge { get; set; }
     }
 
     public class ImageCommand

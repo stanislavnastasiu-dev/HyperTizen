@@ -50,6 +50,12 @@ tizen package -t wgt -s YourProfileName -o path/to/output/dir -- path/to/HyperTi
 tizen install -n path/to/output/dir/HyperTizenUI-<version>.wgt
 ```
 
+## Upgrading from 1.1.0 or the original project
+
+Up to 1.1.0 the colors along the bottom edge and the left edge were sent in reverse order. From 1.1.1 every color is sent where it is measured. If you reversed those LEDs in your Hyperion or HyperHDR layout to make up for it, undo that.
+
+The service now measures 14 places by default instead of 16 (the two in the middle of the screen never reached the LEDs). You can change the number of zones per edge under Settings, Capture zones. That screen and Home show how long a frame takes and how many are sent per second, so you can see what a setting costs.
+
 # Development
 
 There are four projects:

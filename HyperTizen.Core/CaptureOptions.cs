@@ -8,5 +8,8 @@ namespace HyperTizen.Core
 
         // Hyperion priority used for image, color and clear commands.
         public volatile byte Priority = 99;
+
+        // The zones to capture. Replaced as a whole when a zone setting changes.
+        public volatile CaptureLayout Layout = CaptureLayout.Default;
     }
 }

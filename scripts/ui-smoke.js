@@ -233,8 +233,8 @@ async function main() {
   expect('Right moves to Preview', await focused(), 'home-preview');
   await press('Enter');
   await waitFor('Enter opens Preview', onScreen('preview'));
-  await waitFor('swatches are colored', () => evaluate("document.querySelector('.swatch').style.backgroundColor !== ''"));
-  expect('there are 16 swatches', await evaluate("document.querySelectorAll('.swatch').length"), 16);
+  await waitFor('swatches are colored', () => evaluate("!!document.querySelector('.swatch') && document.querySelector('.swatch').style.backgroundColor !== ''"));
+  expect('there are 14 swatches', await evaluate("document.querySelectorAll('.swatch').length"), 14);
   await shot('5-preview');
   await press('Escape');
   await waitFor('Back returns to Home', onScreen('home'));
@@ -249,7 +249,29 @@ async function main() {
   }
   await press('Enter');
   await waitFor('Enter opens Settings', onScreen('settings'));
-  await click('fps-10');
+  await click('fps-custom');
+  await waitFor('the limit opens number entry', onScreen('number'));
+  expect('OK is disabled without a number', await evaluate("document.getElementById('number-ok').disabled"), true);
+  for (const key of ['6', '1']) await click('num-' + key);
+  expect('OK is disabled for 61', await evaluate("document.getElementById('number-ok').disabled"), true);
+  await click('num-del');
+  await click('num-del');
+  for (const key of ['1', '0']) await click('num-' + key);
+  await click('number-ok');
+  await waitFor('OK returns to Settings', onScreen('settings'));
+  await waitFor('the limit shows 10', async () => (await text('fps-custom')) === '10');
+  await waitFor('the zones are summed up', async () => (await text('zones-summary')) === '4 top, 4 bottom, 3 left, 3 right');
+
+  await click('settings-zones');
+  await waitFor('Change opens Capture zones', onScreen('zones'));
+  expect('plus on the top row is focused', await focused(), 'zones-top-up');
+  await click('zones-top-up');
+  expect('top zones shows 5', await text('zones-top-value'), '5');
+  await waitFor('the zone count is stored', async () => JSON.parse(fs.readFileSync(settingsFile, 'utf8')).zonesTop === '5');
+  await waitFor('the timing is shown', async () => (await text('zones-timing')).indexOf('ms per frame') > 0);
+  await shot('6b-zones');
+  await press('Escape');
+  await waitFor('Back returns to Settings from zones', onScreen('settings'));
   await click('priority-up');
   expect('priority shows 100', await text('priority-value'), '100');
   await waitFor('frames move to priority 100', async () => hyperion.messages.some(
@@ -257,6 +279,12 @@ async function main() {
   await shot('6-settings');
   await press('Escape');
   await waitFor('Back returns to Home from Settings', onScreen('home'));
+  await waitFor('Home shows the timing', async () => (await text('tile-timing')).indexOf('ms per frame') > 0);
+  await click('home-preview');
+  await waitFor('Preview opens again', onScreen('preview'));
+  await waitFor('there are 15 swatches after adding a zone', () => evaluate("document.querySelectorAll('.swatch').length === 15"));
+  await press('Escape');
+  await waitFor('Back returns to Home again', onScreen('home'));
 
   // Losing and regaining the service.
   host.kill();
@@ -294,7 +322,7 @@ async function main() {
   await waitFor('the server is stored again', async () => 'rpcServer' in JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
   await send('Page.navigate', { url: UI_URL + '?service=127.0.0.1' });
   await waitFor('a page with ?service= reaches Home', onScreen('home'), 30000);
-  await waitFor('Home names the service it is watching', async () => (await text('tile-version')) === 'Version 1.1.0 on 127.0.0.1');
+  await waitFor('Home names the service it is watching', async () => (await text('tile-version')) === 'Version 1.1.1 on 127.0.0.1');
   await send('Page.navigate', { url: UI_URL + '?service=127.0.0.2' });
   await waitFor('an unreachable ?service= is not replaced by the local one', async () =>
     (await currentScreen()) === 'screen-connecting' && (await visible('connecting-retry'))

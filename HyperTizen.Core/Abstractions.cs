@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace HyperTizen.Core
 {
@@ -22,8 +23,8 @@ namespace HyperTizen.Core
         // False when the device cannot capture; the capture loop does not start.
         bool Initialize();
 
-        // One frame of colors. Blocks for as long as the device needs.
-        Rgb10[] Capture();
+        // One color per point, in the same order. Blocks for as long as the device needs.
+        Rgb10[] Capture(IReadOnlyList<CapturePoint> points);
     }
 
     public interface ISettingsStore

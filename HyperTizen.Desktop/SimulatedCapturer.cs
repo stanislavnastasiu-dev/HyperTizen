@@ -6,19 +6,19 @@ namespace HyperTizen.Desktop;
 // Produces a rotating rainbow in place of real screen colors, at about 30 frames per second.
 public sealed class SimulatedCapturer : IScreenCapturer
 {
-    private const int ColorCount = 16;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
     public bool Initialize() => true;
 
-    public Rgb10[] Capture()
+    public Rgb10[] Capture(IReadOnlyList<CapturePoint> points)
     {
         Thread.Sleep(33);
 
+        // One turn of the rainbow spread over the points, in the order they go around the screen.
         double baseHue = _clock.Elapsed.TotalSeconds * 60.0;
-        var colors = new Rgb10[ColorCount];
-        for (int i = 0; i < ColorCount; i++)
-            colors[i] = FromHue((baseHue + i * 360.0 / ColorCount) % 360.0);
+        var colors = new Rgb10[points.Count];
+        for (int i = 0; i < colors.Length; i++)
+            colors[i] = FromHue((baseHue + i * 360.0 / colors.Length) % 360.0);
         return colors;
     }
 

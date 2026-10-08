@@ -37,6 +37,8 @@
       const capture = ctx.el('tile-capture');
       capture.textContent = CAPTURE_TEXT[status.capture] || status.capture;
       capture.className = 'tile-value ' + (CAPTURE_STYLE[status.capture] || 'idle');
+      // Keeps its line even when empty, so the tiles stay the same height.
+      ctx.el('tile-timing').textContent = HT.capture.timingText(status) || '\u00a0';
 
       showSwitch(!!status.enabled);
       error.hidden = !status.lastError;

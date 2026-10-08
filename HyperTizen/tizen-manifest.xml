@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<manifest xmlns="http://tizen.org/ns/packages" package="io.gh.reisxd.HyperTizen" version="1.1.0"
+<manifest xmlns="http://tizen.org/ns/packages" package="io.gh.reisxd.HyperTizen" version="1.1.1"
     api-version="6.5">
     <profile name="tv" />
     <service-application appid="io.gh.reisxd.HyperTizen" exec="HyperTizen.dll" nodisplay="true"
