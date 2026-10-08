@@ -1,34 +1,20 @@
-﻿using System;
-using System.IO;
+using System;
 using System.Runtime.InteropServices;
 using System.Threading;
-using SkiaSharp;
+using HyperTizen.Core;
 using Tizen.Applications.Notifications;
 using Tizen.System;
 
 namespace HyperTizen
 {
-    public static class Capturer
+    // Reads screen colors through the TV's video enhancement library.
+    public class VideoEnhanceCapturer : IScreenCapturer
     {
-        private static Condition _condition;
+        private readonly ILog _log;
+        private readonly bool _isTizen7OrHigher;
+        private Condition _condition;
 
-        private static bool IsTizen7OrHigher
-        {
-            get
-            {
-                string version;
-                Information.TryGetValue("http://tizen.org/feature/platform.version", out version);
-                if (int.Parse(version.Split('.')[0]) >= 7)
-                {
-                    return true;
-                } else
-                {
-                    return false;
-                }
-            }
-        }
-
-        private static CapturePoint[] _capturedPoints = new CapturePoint[] {
+        private readonly CapturePoint[] _capturedPoints = new CapturePoint[] {
             new CapturePoint(0.21, 0.05),
             new CapturePoint(0.45, 0.05),
             new CapturePoint(0.7, 0.05),
@@ -46,7 +32,7 @@ namespace HyperTizen
             new CapturePoint(0.35, 0.5),
             new CapturePoint(0.65, 0.5)
         };
-        
+
         [DllImport("/usr/lib/libvideoenhance.so", CallingConvention = CallingConvention.Cdecl, EntryPoint = "cs_ve_get_rgb_measure_condition")]
         private static extern int MeasureCondition(out Condition unknown);
 
@@ -64,21 +50,33 @@ namespace HyperTizen
 
         [DllImport("/usr/lib/libvideoenhance.so", CallingConvention = CallingConvention.Cdecl, EntryPoint = "ve_get_rgb_measure_pixel")]
         private static extern int MeasurePixel7(int i, out Color color);
-        
-        public static bool GetCondition()
+
+        public VideoEnhanceCapturer(ILog log)
+        {
+            _log = log;
+
+            string version;
+            Information.TryGetValue("http://tizen.org/feature/platform.version", out version);
+            _log.Info("Platform version: " + version);
+            _isTizen7OrHigher = version != null && int.Parse(version.Split('.')[0]) >= 7;
+        }
+
+        public bool Initialize()
         {
             int res = -1;
             try
             {
-                if (!IsTizen7OrHigher)
+                if (!_isTizen7OrHigher)
                 {
                     res = MeasureCondition(out _condition);
                 } else
                 {
                     res = MeasureCondition7(out _condition);
                 }
-            } catch
+            } catch (Exception ex)
             {
+                _log.Error("The video enhancement library is not usable", ex);
+
                 Notification notification = new Notification
                 {
                     Title = "HyperTizen",
@@ -88,24 +86,17 @@ namespace HyperTizen
 
                 NotificationManager.Post(notification);
             }
-            if (res < 0)
-            {
-                return false;
-            } else
-            {
-                return true;
-            }
+
+            _log.Info("Measure condition result " + res + ": points=" + _condition.ScreenCapturePoints
+                + " size=" + _condition.Width + "x" + _condition.Height
+                + " density=" + _condition.PixelDensityX + "x" + _condition.PixelDensityY
+                + " sleep=" + _condition.SleepMS);
+            return res >= 0;
         }
 
-        public static void SetCapturePoints(CapturePoint[] capturePoints)
+        public Rgb10[] Capture()
         {
-            _capturedPoints = capturePoints;
-        }
-        
-        public static Color[] GetColors()
-        {
-            Color[] colorData = new Color[_capturedPoints.Length];
-            int[] updatedIndexes = new int[_condition.ScreenCapturePoints];
+            Rgb10[] colorData = new Rgb10[_capturedPoints.Length];
 
             int i = 0;
             while (i < _capturedPoints.Length)
@@ -113,20 +104,19 @@ namespace HyperTizen
                 if (_condition.ScreenCapturePoints == 0) break;
                 for (int j = 0; j < _condition.ScreenCapturePoints; j++)
                 {
-                    updatedIndexes[j] = i;
                     int x = (int)(_capturedPoints[i].X * (double)_condition.Width) - _condition.PixelDensityX / 2;
                     int y = (int)(_capturedPoints[i].Y * (double)_condition.Height) - _condition.PixelDensityY / 2;
                     x = (x >= _condition.Width - _condition.PixelDensityX) ? _condition.Width - (_condition.PixelDensityX + 1) : x;
                     y = (y >= _condition.Height - _condition.PixelDensityY) ? (_condition.Height - _condition.PixelDensityY + 1) : y;
                     int res;
-                    if (!IsTizen7OrHigher)
+                    if (!_isTizen7OrHigher)
                     {
                         res = MeasurePosition(j, x, y);
                     } else
                     {
                         res = MeasurePosition7(j, x, y);
                     }
-                  
+
                     i++;
                     if (res < 0)
                     {
@@ -145,7 +135,7 @@ namespace HyperTizen
 
                     int res;
 
-                    if (!IsTizen7OrHigher)
+                    if (!_isTizen7OrHigher)
                     {
                         res = MeasurePixel(k, out color);
                     } else
@@ -165,7 +155,7 @@ namespace HyperTizen
                             // This should not happen, handle it.
                         } else
                         {
-                            colorData[i - _condition.ScreenCapturePoints + k] = color;
+                            colorData[i - _condition.ScreenCapturePoints + k] = new Rgb10(color.R, color.G, color.B);
                             k++;
                         }
                     }
@@ -174,102 +164,37 @@ namespace HyperTizen
             return colorData;
         }
 
-        public static string ToImage(Color[] colors)
+        private struct Color
         {
-            using (var image = new SKBitmap(64, 48))
-            {
-                for (int x = 0; x < 64; x++)
-                {
-                    Color color = colors[x / 16];
-                    SKColor sKColor = ClampColor(color);
-                    for (int y = 0; y < 4; y++)
-                    {
-                        image.SetPixel(x, y, sKColor);
-                    }
-                }
+            public int R;
+            public int G;
+            public int B;
+        }
 
-                for (int x = 0; x < 64; x++)
-                {
-                    Color color = colors[x / 16 + 7];
-                    SKColor sKColor = ClampColor(color);
-                    for (int y = 44; y < 48; y++)
-                    {
-                        image.SetPixel(x, y, sKColor);
-                    }
-                }
+        private struct Condition
+        {
+            public int ScreenCapturePoints;
 
-                for (int y = 0; y < 48; y++)
-                {
-                    Color color = colors[11 + y / 16];
-                    SKColor sKColor = ClampColor(color);
-                    for (int x = 0; x < 3; x++)
-                    {
-                        image.SetPixel(x, y, sKColor);
-                    }
-                }
+            public int PixelDensityX;
 
-                for (int y = 0; y < 48; y++)
-                {
-                    Color color = colors[4 + y / 16];
-                    SKColor sKColor = ClampColor(color);
-                    for (int x = 61; x < 64; x++)
-                    {
-                        image.SetPixel(x, y, sKColor);
-                    }
-                }
+            public int PixelDensityY;
 
-                using (var memoryStream = new MemoryStream())
-                {
-                    using (var data = SKImage.FromBitmap(image).Encode(SKEncodedImageFormat.Png, 100))
-                    {
-                        data.SaveTo(memoryStream);
-                    }
-                    byte[] imageBytes = memoryStream.ToArray();
-                    string base64String = Convert.ToBase64String(imageBytes);
-                    return base64String;
-                }
+            public int SleepMS;
+
+            public int Width;
+
+            public int Height;
+        }
+
+        private struct CapturePoint
+        {
+            public CapturePoint(double x, double y) {
+                this.X = x;
+                this.Y = y;
             }
+
+            public double X;
+            public double Y;
         }
-
-        static SKColor ClampColor(Color color)
-        {
-            byte r = (byte)Math.Min(color.R, 255);
-            byte g = (byte)Math.Min(color.G, 255);
-            byte b = (byte)Math.Min(color.B, 255);
-            return new SKColor(r, g, b);
-        }
-    }
-
-    public struct Color
-    {
-        public int R;
-        public int G;
-        public int B;
-    }
-
-    public struct Condition
-    {
-        public int ScreenCapturePoints;
-
-        public int PixelDensityX;
-
-        public int PixelDensityY;
-
-        public int SleepMS;
-
-        public int Width;
-
-        public int Height;
-    }
-
-    public struct CapturePoint
-    {
-        public CapturePoint(double x, double y) {
-            this.X = x;
-            this.Y = y;
-        }
-
-        public double X;
-        public double Y;
     }
 }

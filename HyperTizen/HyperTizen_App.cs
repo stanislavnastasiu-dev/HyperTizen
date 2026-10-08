@@ -1,80 +1,67 @@
-﻿using Tizen.Applications;
-using Tizen.Applications.Notifications;
-using Tizen.System;
-using HyperTizen.WebSocket;
+using System;
 using System.Threading.Tasks;
+using HyperTizen.Core;
+using Tizen.Applications;
+using Tizen.System;
 
 namespace HyperTizen
 {
     class App : ServiceApplication
     {
-        public static HyperionClient client;
+        private ILog _log;
+        private HyperTizenService _service;
+
         protected override void OnCreate()
         {
             base.OnCreate();
-            if (!Preference.Contains("enabled")) Preference.Set("enabled", "false");
-            Task.Run(() => WebSocketServer.StartServerAsync());
+            _log = new DlogLog();
+            _service = new HyperTizenService("http://+:8086/", new VideoEnhanceCapturer(_log), new PreferenceSettingsStore(), _log);
+            RunInBackground(_service.StartAsync, "start");
             Display.StateChanged += Display_StateChanged;
-            client = new HyperionClient();
         }
 
         private void Display_StateChanged(object sender, DisplayStateChangedEventArgs e)
         {
             if (e.State == DisplayState.Off)
             {
-                Task.Run(() => client.Stop());
+                RunInBackground(_service.OnDisplayOffAsync, "display off");
             } else if (e.State == DisplayState.Normal)
             {
-                Configuration.Enabled = bool.Parse(Preference.Get<string>("enabled"));
-                Task.Run(() => client.Start());
+                RunInBackground(_service.OnDisplayOnAsync, "display on");
             }
-        }
-
-        protected override void OnAppControlReceived(AppControlReceivedEventArgs e)
-        {
-            base.OnAppControlReceived(e);
-        }
-
-        protected override void OnDeviceOrientationChanged(DeviceOrientationEventArgs e)
-        {
-            base.OnDeviceOrientationChanged(e);
-        }
-
-        protected override void OnLocaleChanged(LocaleChangedEventArgs e)
-        {
-            base.OnLocaleChanged(e);
-        }
-
-        protected override void OnLowBattery(LowBatteryEventArgs e)
-        {
-            base.OnLowBattery(e);
-        }
-
-        protected override void OnLowMemory(LowMemoryEventArgs e)
-        {
-            base.OnLowMemory(e);
-        }
-
-        protected override void OnRegionFormatChanged(RegionFormatChangedEventArgs e)
-        {
-            base.OnRegionFormatChanged(e);
         }
 
         protected override void OnTerminate()
         {
+            Display.StateChanged -= Display_StateChanged;
+            try
+            {
+                _service.StopAsync().Wait(TimeSpan.FromSeconds(5));
+            } catch (Exception ex)
+            {
+                _log.Error("Stopping the service failed", ex);
+            }
             base.OnTerminate();
+        }
+
+        private void RunInBackground(Func<Task> action, string what)
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await action();
+                } catch (Exception ex)
+                {
+                    _log.Error("HyperTizen failed during " + what, ex);
+                }
+            });
         }
 
         static void Main(string[] args)
         {
             App app = new App();
             app.Run(args);
-        }
-
-        public static class Configuration
-        {
-            public static string RPCServer = Preference.Contains("rpcServer") ? Preference.Get<string>("rpcServer") : null;
-            public static bool Enabled = bool.Parse(Preference.Get<string>("enabled"));
         }
     }
 }
