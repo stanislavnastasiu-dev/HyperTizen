@@ -72,10 +72,21 @@ try {
     # --- check-version
     $checkVersion = Join-Path $PSScriptRoot 'check-version.ps1'
 
-    # A stand-in repository holding only the two files that carry the version.
-    function New-Source([string]$manifestVersion, [string]$coreVersion) {
+    # A stand-in repository holding only the files that carry the version. The three of the UI
+    # say the manifest's version unless told otherwise.
+    function New-Source([string]$manifestVersion, [string]$coreVersion, [string]$packageVersion, [string]$widgetVersion, [string]$shownVersion) {
+        if (-not $packageVersion) { $packageVersion = $manifestVersion }
+        if (-not $widgetVersion) { $widgetVersion = $manifestVersion }
+        if (-not $shownVersion) { $shownVersion = $manifestVersion }
         $folder = Join-Path $work ('source-' + [Guid]::NewGuid().ToString('N'))
-        New-Item -ItemType Directory -Force (Join-Path $folder 'HyperTizen'), (Join-Path $folder 'HyperTizen.Core') | Out-Null
+        New-Item -ItemType Directory -Force (Join-Path $folder 'HyperTizen'), (Join-Path $folder 'HyperTizen.Core'),
+            (Join-Path $folder 'HyperTizenUI/js') | Out-Null
+        Set-Content (Join-Path $folder 'HyperTizenUI/package.json') -Encoding UTF8 -Value "{ `"version`": `"$packageVersion`" }"
+        Set-Content (Join-Path $folder 'HyperTizenUI/config.xml') -Encoding UTF8 -Value @"
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" version="$widgetVersion"></widget>
+"@
+        Set-Content (Join-Path $folder 'HyperTizenUI/js/app.js') -Encoding UTF8 -Value "  HT.uiVersion = '$shownVersion';"
         Set-Content (Join-Path $folder 'HyperTizen/tizen-manifest.xml') -Encoding UTF8 -Value @"
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns="http://tizen.org/ns/packages" package="io.gh.reisxd.HyperTizen" version="$manifestVersion" api-version="6.5">
@@ -129,7 +140,13 @@ try {
         Assert-Rejected 'v1.1.0' (New-Source '1.1.0' '1.2.0') '1.2.0'
     }
 
-    Check 'the manifest and the core project of this repository carry the same version' {
+    Check 'check-version rejects a UI whose version disagrees, and names the file' {
+        Assert-Rejected 'v1.1.0' (New-Source '1.1.0' '1.1.0' '1.0.0') "HyperTizenUI/package.json has '1.0.0'"
+        Assert-Rejected 'v1.1.0' (New-Source '1.1.0' '1.1.0' '' '0.2.1') "HyperTizenUI/config.xml has '0.2.1'"
+        Assert-Rejected 'v1.1.0' (New-Source '1.1.0' '1.1.0' '' '' '1.0.9') "HyperTizenUI/js/app.js has '1.0.9'"
+    }
+
+    Check 'every file of this repository that carries the version carries the same one' {
         $version = ([xml](Get-Content (Join-Path $root 'HyperTizen/tizen-manifest.xml') -Raw)).manifest.version
         Assert-Equal $version (& $checkVersion -Tag "v$version")
     }
