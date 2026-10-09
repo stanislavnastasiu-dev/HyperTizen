@@ -31,6 +31,11 @@ namespace HyperTizen.Core
         // reply. Null when there is nothing to tell.
         string Diagnostics { get; }
 
+        // Upper bound, in milliseconds, on the settle time waited between setting measure points and
+        // reading them. 0 leaves the device's own figure untouched; a smaller value overrides it to
+        // trade accuracy for speed. Read live, so a change applies on the next frame.
+        int SleepMsCap { get; set; }
+
         // One color per point, in the same order. Blocks for as long as the device needs.
         Rgb10[] Capture(IReadOnlyList<CapturePoint> points);
     }

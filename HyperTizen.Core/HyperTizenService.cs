@@ -14,6 +14,7 @@ namespace HyperTizen.Core
         private const string MaxFpsKey = "maxFps";
         private const string PriorityKey = "priority";
         private const string InstanceKey = "instance";
+        private const string SleepCapKey = "captureSleepMs";
         private const string ZonesTopKey = "zonesTop";
         private const string ZonesBottomKey = "zonesBottom";
         private const string ZonesLeftKey = "zonesLeft";
@@ -55,6 +56,7 @@ namespace HyperTizen.Core
             _options.MaxFps = int.Parse(StoredOrDefault(MaxFpsKey, "0"), CultureInfo.InvariantCulture);
             _options.Priority = byte.Parse(StoredOrDefault(PriorityKey, "99"), CultureInfo.InvariantCulture);
             _options.Layout = StoredLayout();
+            _capturer.SleepMsCap = int.Parse(StoredOrDefault(SleepCapKey, "0"), CultureInfo.InvariantCulture);
             await _client.SetInstanceAsync(int.Parse(StoredOrDefault(InstanceKey, "0"), CultureInfo.InvariantCulture)).ConfigureAwait(false);
 
             _control.Start();
@@ -115,6 +117,10 @@ namespace HyperTizen.Core
 
                 case MaxFpsKey:
                     _options.MaxFps = int.Parse(value, CultureInfo.InvariantCulture);
+                    break;
+
+                case SleepCapKey:
+                    _capturer.SleepMsCap = int.Parse(value, CultureInfo.InvariantCulture);
                     break;
 
                 case PriorityKey:
@@ -221,6 +227,11 @@ namespace HyperTizen.Core
                     // 0 is unlimited.
                     int fps;
                     return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out fps) && fps <= 60;
+
+                case SleepCapKey:
+                    // 0 keeps the device's own settle time; otherwise an upper bound in milliseconds.
+                    int sleep;
+                    return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out sleep) && sleep <= 1000;
 
                 case PriorityKey:
                     int priority;

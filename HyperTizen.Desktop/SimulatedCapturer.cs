@@ -14,6 +14,9 @@ public sealed class SimulatedCapturer : IScreenCapturer
 
     public string? Diagnostics => null;
 
+    // No measure settle time to cap; the simulated capturer sleeps a fixed amount.
+    public int SleepMsCap { get; set; }
+
     public Rgb10[] Capture(IReadOnlyList<CapturePoint> points)
     {
         Thread.Sleep(33);

@@ -16,3 +16,5 @@ HyperTizenUI/Release
 homey.local.json
 *.csproj.backup
 docs/superpowers/
+
+.claude/settings.local.json
