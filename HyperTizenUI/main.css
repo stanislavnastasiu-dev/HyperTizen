@@ -140,10 +140,13 @@ button.selected {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    width: 1100px;
-    max-height: 420px;
+    /* The list cuts off what does not fit, and would cut off the focus outline of its buttons
+       with it. The padding is room for the outline; the margin puts the buttons back in line. */
+    width: 1180px;
+    max-height: 452px;
+    padding: 16px 40px;
+    margin: -16px -40px -8px;
     overflow: hidden;
-    margin-bottom: 8px;
 }
 
 .device {
