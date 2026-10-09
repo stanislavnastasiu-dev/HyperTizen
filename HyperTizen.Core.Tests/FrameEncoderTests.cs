@@ -96,7 +96,7 @@ public class FrameEncoderTests
         Assert.Equal(Expected(14), PixelOf(layout, 59, 0));
         Assert.Equal(Expected(layout.Offset(Edge.Right)), PixelOf(layout, 62, 3));
         Assert.Equal(Expected(layout.Offset(Edge.Right) + 1), PixelOf(layout, 62, 4));
-        Assert.Equal(Expected(layout.Offset(Edge.Right) + 11), PixelOf(layout, 62, 47));
+        Assert.Equal(Expected(layout.Offset(Edge.Right) + 11), PixelOf(layout, 62, 44));
         Assert.Equal(Expected(layout.Offset(Edge.Bottom)), PixelOf(layout, 31, 46));
         Assert.Equal(Expected(layout.Offset(Edge.Bottom) + 1), PixelOf(layout, 32, 46));
     }
@@ -118,10 +118,33 @@ public class FrameEncoderTests
         Assert.Equal((0, 0, 0), PixelOf(layout, 1, 24));
     }
 
-    [Fact]
-    public void Interior_is_black()
+    [Theory]
+    [InlineData(40, 12, 2)]
+    [InlineData(24, 36, 8)]
+    [InlineData(12, 24, 12)]
+    [InlineData(52, 24, 5)]
+    public void A_zone_colors_the_image_from_its_edge_to_the_middle(int x, int y, int zone)
     {
-        Assert.Equal((0, 0, 0), PixelOf(CaptureLayout.Default, 32, 24));
+        Assert.Equal(Expected(zone), PixelOf(CaptureLayout.Default, x, y));
+    }
+
+    [Fact]
+    public void No_pixel_is_black_when_every_edge_has_zones()
+    {
+        byte[] rgb = FrameEncoder.ToRgb(Colors(CaptureLayout.Default), CaptureLayout.Default);
+
+        for (int y = 0; y < FrameEncoder.Height; y++)
+            for (int x = 0; x < FrameEncoder.Width; x++)
+                Assert.NotEqual((0, 0, 0), Pixel(rgb, x, y));
+    }
+
+    [Fact]
+    public void The_part_of_an_edge_without_zones_is_black_to_the_middle()
+    {
+        var layout = new CaptureLayout(4, 0, 3, 3);
+
+        Assert.Equal((0, 0, 0), PixelOf(layout, 32, 30));
+        Assert.Equal(Expected(2), PixelOf(layout, 40, 12));
     }
 
     [Fact]

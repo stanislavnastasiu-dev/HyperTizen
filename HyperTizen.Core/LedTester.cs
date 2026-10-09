@@ -66,6 +66,10 @@ namespace HyperTizen.Core
                         if (!await _client.SendColorAsync(color[0], color[1], color[2], priority).ConfigureAwait(false))
                             return new TestLedsResultEvent(false, "The server stopped responding.");
                         await Task.Delay(_step).ConfigureAwait(false);
+
+                        // Sent is not shown: a server that wants a login, say, answers with a refusal.
+                        string rejection = _client.Rejection;
+                        if (rejection != null) return new TestLedsResultEvent(false, rejection);
                     }
 
                     await _client.SendClearAsync(priority).ConfigureAwait(false);

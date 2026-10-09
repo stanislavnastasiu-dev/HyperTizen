@@ -14,10 +14,11 @@ This repository is a fork of [reisxd/HyperTizen](https://github.com/reisxd/Hyper
 - **Guided setup on the TV.** Three steps with the remote: choose your server (found on the network, or typed in), check that the LEDs light up, turn it on.
 - **A Home screen that says what is happening.** Service, server and capture each show their state, with the last error when something is wrong.
 - **Preview.** See the colors the TV is capturing, placed where they are measured on the screen.
-- **Settings.** Frame rate limit (any value up to 60), Hyperion priority, and forgetting the server.
+- **Settings.** Frame rate limit (any value up to 60), Hyperion priority, which LED instance of the server to drive, and forgetting the server.
 - **Capture zones you choose.** Set how many zones the top, bottom, left and right edge have: fewer for faster updates, more for finer color, none for an edge without LEDs. The TV shows how long a frame takes with your choice.
 - **Capture on newer TVs**, and 10-bit colors scaled correctly.
-- **Reconnecting.** The service finds its server again after either side restarts.
+- **Reconnecting.** The service finds its server again after either side restarts, or after the server went away without a word.
+- **Saying when the server refuses.** If Hyperion or HyperHDR turns the colors down, for example because it wants a login, Home and the LED test show its reason.
 - **Run it on your PC.** A desktop host runs the same service logic with simulated colors and serves the TV UI in a browser, so most work needs no TV.
 - **Tests** for the service logic and the UI, and scripts that build, sign and install on a TV in one step.
 

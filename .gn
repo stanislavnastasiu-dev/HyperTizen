@@ -1,6 +1,0 @@
-
-arg_file_template = ""
-buildconfig = "//build/BUILDCONFIG.gn"
-root = "//build:"
-script_executable = ""
-secondary_source = "//build"

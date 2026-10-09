@@ -58,6 +58,16 @@ The service now measures 14 places by default instead of 16 (the two in the midd
 
 From 1.1.2 the LEDs are updated more often. A TV measures only a few places at a time and waits between them, so the service now sends after each of those steps instead of once all places are measured. The timing shown is that of one step; every zone is still measured once per round, and a round takes longer the more zones there are.
 
+From 1.1.4 every zone colors the picture sent to the server from its edge to the middle, not only a thin border. If your LEDs got dimmer colors because their areas in the server's layout reach deeper than that border, they are now as bright as the screen. In the corners the picture is split between the two edges along the diagonal; before, the left and right edge had the whole corner.
+
+## Server settings that matter
+
+HyperTizen does not log in to the server. If Home or the LED test shows "No Authorization", turn off **API Authentication** in the server's network settings, or allow connections from the local network without it.
+
+A server with more than one LED instance gets the colors on its first one. Choose another under Settings, LED instance: 0 is the first, 1 the second, and so on.
+
+The colors are sent as a small picture in which every zone reaches from its edge to the middle, so the depth of the LED areas in the server's layout does not matter. The picture expires on the server after 5 seconds without a newer one: if the TV loses power, the LEDs go dark by themselves.
+
 # Development
 
 There are four projects:
@@ -89,6 +99,8 @@ Run the tests with:
 ```bash
 dotnet test HyperTizen.Core.Tests
 ```
+
+The desktop host and the tests need the .NET 10 SDK. If the build says it cannot target .NET 10, the `dotnet` it found is the older one that comes with the Tizen extension: check with `dotnet --list-sdks`, and run the one you installed by its full path (on Windows `C:\Program Files\dotnet\dotnet.exe`).
 
 ## Running on the TV
 

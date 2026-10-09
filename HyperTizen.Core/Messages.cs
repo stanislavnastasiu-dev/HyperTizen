@@ -161,6 +161,21 @@ namespace HyperTizen.Core
         public string format { get; set; } = "auto";
         public byte priority { get; set; }
         public string origin { get; set; } = "HyperTizen";
+        // Milliseconds the server keeps the image without a newer one, so the LEDs do not stay lit
+        // on the last frame when the TV goes away without clearing.
+        public int duration { get; set; } = 5000;
+    }
+
+    public class InstanceCommand
+    {
+        public InstanceCommand(int instance)
+        {
+            this.instance = instance;
+        }
+
+        public string command { get; set; } = "instance";
+        public string subcommand { get; set; } = "switchTo";
+        public int instance { get; set; }
     }
 
     public class ClearCommand

@@ -1,10 +1,11 @@
-// Frame rate limit, priority, capture zones, and forgetting the server.
+// Frame rate limit, priority, LED instance, capture zones, and forgetting the server.
 (function (root) {
   'use strict';
   const HT = root.HyperTizen = root.HyperTizen || {};
   HT.screens = HT.screens || {};
 
   const DEFAULT_PRIORITY = 99;
+  const MAX_INSTANCE = 254;
 
   HT.screens['settings'] = function (ctx) {
     const unlimited = ctx.el('fps-0');
@@ -14,7 +15,9 @@
     const forget = ctx.el('forget-server');
     const confirmation = ctx.el('forget-confirm');
     const cancel = ctx.el('forget-no');
+    const instanceValue = ctx.el('instance-value');
     let priority = DEFAULT_PRIORITY;
+    let instance = 0;
 
     function showFps(value) {
       const limit = Number(value) || 0;
@@ -34,6 +37,13 @@
       showPriority();
     }
 
+    function changeInstance(delta) {
+      const next = Math.max(0, Math.min(MAX_INSTANCE, instance + delta));
+      if (next === instance || !ctx.set('instance', String(next))) return;
+      instance = next;
+      instanceValue.textContent = String(instance);
+    }
+
     function showConfirmation(visible) {
       confirmation.hidden = !visible;
       forget.hidden = visible;
@@ -46,6 +56,11 @@
       client.readConfig('priority').then(reply => {
         priority = reply.error ? DEFAULT_PRIORITY : (Number(reply.value) || DEFAULT_PRIORITY);
         showPriority();
+      }, () => {});
+      client.readConfig('instance').then(reply => {
+        const stored = reply.error ? null : HT.capture.parseNumber(reply.value, 0, MAX_INSTANCE);
+        instance = stored === null ? 0 : stored;
+        instanceValue.textContent = String(instance);
       }, () => {});
 
       const counts = {};
@@ -72,6 +87,8 @@
     });
     ctx.el('priority-down').onclick = () => changePriority(-1);
     ctx.el('priority-up').onclick = () => changePriority(1);
+    ctx.el('instance-down').onclick = () => changeInstance(-1);
+    ctx.el('instance-up').onclick = () => changeInstance(1);
     ctx.el('settings-zones').onclick = () => ctx.router.go('zones');
 
     forget.onclick = () => {

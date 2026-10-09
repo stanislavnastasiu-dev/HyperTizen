@@ -13,6 +13,7 @@ namespace HyperTizen.Core
         private const string RpcServerKey = "rpcServer";
         private const string MaxFpsKey = "maxFps";
         private const string PriorityKey = "priority";
+        private const string InstanceKey = "instance";
         private const string ZonesTopKey = "zonesTop";
         private const string ZonesBottomKey = "zonesBottom";
         private const string ZonesLeftKey = "zonesLeft";
@@ -54,6 +55,7 @@ namespace HyperTizen.Core
             _options.MaxFps = int.Parse(StoredOrDefault(MaxFpsKey, "0"), CultureInfo.InvariantCulture);
             _options.Priority = byte.Parse(StoredOrDefault(PriorityKey, "99"), CultureInfo.InvariantCulture);
             _options.Layout = StoredLayout();
+            await _client.SetInstanceAsync(int.Parse(StoredOrDefault(InstanceKey, "0"), CultureInfo.InvariantCulture)).ConfigureAwait(false);
 
             _control.Start();
             if (IsEnabled()) await _capture.StartAsync().ConfigureAwait(false);
@@ -119,7 +121,18 @@ namespace HyperTizen.Core
                     // The capture loop clears the old priority before its next frame.
                     _options.Priority = byte.Parse(value, CultureInfo.InvariantCulture);
                     break;
+
+                case InstanceKey:
+                    await SwitchInstanceAsync(int.Parse(value, CultureInfo.InvariantCulture)).ConfigureAwait(false);
+                    break;
             }
+        }
+
+        // The instance being left keeps showing the last image unless it is cleared first.
+        private async Task SwitchInstanceAsync(int instance)
+        {
+            await _client.SendClearAsync(_options.Priority).ConfigureAwait(false);
+            await _client.SetInstanceAsync(instance).ConfigureAwait(false);
         }
 
         async Task IControlActions.OnConfigDeletedAsync(string key)
@@ -148,6 +161,10 @@ namespace HyperTizen.Core
                 case PriorityKey:
                     _options.Priority = 99;
                     break;
+
+                case InstanceKey:
+                    await SwitchInstanceAsync(0).ConfigureAwait(false);
+                    break;
             }
         }
 
@@ -160,7 +177,8 @@ namespace HyperTizen.Core
                 rpcServer = _settings.Contains(RpcServerKey) ? _settings.Get(RpcServerKey) : null,
                 connected = _client.IsConnected,
                 capture = _capture.State,
-                lastError = _errors.LastError,
+                // A refusal stays true for as long as the server keeps refusing; other errors pass.
+                lastError = _client.Rejection ?? _errors.LastError,
                 frameMs = _capture.FrameMs,
                 fps = _capture.Fps,
                 captureDetails = _capturer.Diagnostics
@@ -209,11 +227,17 @@ namespace HyperTizen.Core
                     return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out priority)
                         && priority >= 1 && priority <= 253;
 
+                case InstanceKey:
+                    int instance;
+                    return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out instance) && instance <= 254;
+
                 case RpcServerKey:
-                    return !string.IsNullOrWhiteSpace(value);
+                    Uri server;
+                    return Uri.TryCreate(value, UriKind.Absolute, out server) && (server.Scheme == "ws" || server.Scheme == "wss");
 
                 default:
-                    return true;
+                    // Anyone on the network can reach the control server; it stores only what it knows.
+                    return false;
             }
         }
 

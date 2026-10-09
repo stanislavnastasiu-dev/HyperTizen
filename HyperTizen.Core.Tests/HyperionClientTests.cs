@@ -28,6 +28,8 @@ public class HyperionClientTests
         Assert.Equal("auto", (string?)message["format"]);
         Assert.Equal(99, (int)message["priority"]!);
         Assert.Equal("HyperTizen", (string?)message["origin"]);
+        // The server drops the image by itself when no newer one arrives.
+        Assert.Equal(5000, (int)message["duration"]!);
         await client.StopAsync();
     }
 

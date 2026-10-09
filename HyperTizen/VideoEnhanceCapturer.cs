@@ -110,6 +110,12 @@ namespace HyperTizen
                     + " size=" + _condition.Width + "x" + _condition.Height
                     + " density=" + _condition.PixelDensityX + "x" + _condition.PixelDensityY
                     + " sleep=" + _condition.SleepMS);
+                if (res >= 0 && _condition.ScreenCapturePoints <= 0)
+                {
+                    // Capturing would return black for every zone and look like it works.
+                    _log.Error("The TV reports no capture points");
+                    return false;
+                }
                 return res >= 0;
             }
 
@@ -161,7 +167,7 @@ namespace HyperTizen
             int i = 0;
             while (i < points.Count)
             {
-                if (_condition.ScreenCapturePoints <= 0) break;
+                if (_condition.ScreenCapturePoints <= 0) throw new InvalidOperationException("The TV reports no capture points.");
 
                 int batch = Math.Min(_condition.ScreenCapturePoints, points.Count - i);
                 long started = clock.ElapsedTicks;

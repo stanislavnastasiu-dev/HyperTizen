@@ -50,6 +50,20 @@ public class LedTesterTests
     }
 
     [Fact]
+    public async Task Fails_with_the_servers_reason_when_the_colors_are_refused()
+    {
+        using var server = new FakeHyperionServer { Reply = message => FakeHyperionServer.Refuse(message, "No Authorization") };
+        var fixture = new Fixture(server.Uri);
+
+        TestLedsResultEvent result = await fixture.Tester.RunAsync();
+
+        Assert.False(result.ok);
+        Assert.Equal("The server refused 'color': No Authorization", result.error);
+        Assert.False(fixture.Capture.Paused);
+        Assert.False(fixture.Client.IsStarted);
+    }
+
+    [Fact]
     public async Task Disconnects_afterwards_when_capture_is_not_running()
     {
         using var server = new FakeHyperionServer();
