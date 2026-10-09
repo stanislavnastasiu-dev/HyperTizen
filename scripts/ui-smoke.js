@@ -322,7 +322,7 @@ async function main() {
   await waitFor('the server is stored again', async () => 'rpcServer' in JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
   await send('Page.navigate', { url: UI_URL + '?service=127.0.0.1' });
   await waitFor('a page with ?service= reaches Home', onScreen('home'), 30000);
-  await waitFor('Home names the service it is watching', async () => (await text('tile-version')) === 'Version 1.1.3 on 127.0.0.1');
+  await waitFor('Home names the service it is watching', async () => (await text('tile-version')) === 'Version 1.1.4 on 127.0.0.1');
   await send('Page.navigate', { url: UI_URL + '?service=127.0.0.2' });
   await waitFor('an unreachable ?service= is not replaced by the local one', async () =>
     (await currentScreen()) === 'screen-connecting' && (await visible('connecting-retry'))

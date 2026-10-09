@@ -58,6 +58,8 @@ The service now measures 14 places by default instead of 16 (the two in the midd
 
 From 1.1.2 the LEDs are updated more often. A TV measures only a few places at a time and waits between them, so the service now sends after each of those steps instead of once all places are measured. The timing shown is that of one step; every zone is still measured once per round, and a round takes longer the more zones there are.
 
+From 1.1.4 every zone colors the picture sent to the server from its edge to the middle, not only a thin border. If your LEDs got dimmer colors because their areas in the server's layout reach deeper than that border, they are now as bright as the screen. In the corners the picture is split between the two edges along the diagonal; before, the left and right edge had the whole corner.
+
 ## Server settings that matter
 
 HyperTizen does not log in to the server. If Home or the LED test shows "No Authorization", turn off **API Authentication** in the server's network settings, or allow connections from the local network without it.
