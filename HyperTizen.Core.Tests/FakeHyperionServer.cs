@@ -25,6 +25,25 @@ internal sealed class FakeHyperionServer : IDisposable
     public ConcurrentQueue<string> Messages { get; } = new();
     public int ConnectionCount => _connectionCount;
 
+    // Like Hyperion, answers every command; a test replaces this to refuse some.
+    public Func<string, string?> Reply { get; set; } = Accept;
+    // While true nothing is answered, as when the server's machine is gone without closing.
+    public volatile bool Silent;
+
+    public static string Accept(string message) =>
+        "{\"command\":\"" + ReplyName(message) + "\",\"success\":true,\"tan\":0}";
+
+    public static string Refuse(string message, string error) =>
+        "{\"command\":\"" + ReplyName(message) + "\",\"error\":\"" + error + "\",\"success\":false,\"tan\":0}";
+
+    // Hyperion names a reply after the command and, when there is one, its subcommand.
+    private static string ReplyName(string message)
+    {
+        var parsed = Newtonsoft.Json.Linq.JObject.Parse(message);
+        string? subcommand = (string?)parsed["subcommand"];
+        return (string?)parsed["command"] + (subcommand == null ? "" : "-" + subcommand);
+    }
+
     public void DropConnections()
     {
         foreach (var connection in _sockets)
@@ -83,7 +102,12 @@ internal sealed class FakeHyperionServer : IDisposable
                     message.Write(buffer, 0, result.Count);
                 } while (!result.EndOfMessage);
 
-                Messages.Enqueue(Encoding.UTF8.GetString(message.ToArray()));
+                string text = Encoding.UTF8.GetString(message.ToArray());
+                Messages.Enqueue(text);
+
+                string? reply = Silent ? null : Reply(text);
+                if (reply != null)
+                    await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(reply)), WebSocketMessageType.Text, true, CancellationToken.None);
             }
         }
         catch
