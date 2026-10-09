@@ -11,8 +11,10 @@ namespace HyperTizen.Core
         private const int TopBottomRows = 4;
         private const int LeftRightColumns = 3;
 
-        // Each border is split evenly into one band per zone of its edge, and a zone colors the band
-        // at the place it was measured. A border whose edge has no zones stays black.
+        // Every pixel belongs to the edge it is nearest to. That edge is split evenly into one band
+        // per zone, and a zone colors its band all the way to the middle of the image: however deep
+        // the server's LED areas reach into the picture, they find color and not black. The part of
+        // an edge without zones stays black, so its LEDs stay dark.
         public static byte[] ToRgb(Rgb10[] colors, CaptureLayout layout)
         {
             if (colors == null) throw new ArgumentNullException(nameof(colors));
@@ -23,28 +25,47 @@ namespace HyperTizen.Core
 
             var rgb = new byte[Width * Height * 3];
 
-            if (layout.Top > 0)
+            for (int y = 0; y < Height; y++)
+            {
                 for (int x = 0; x < Width; x++)
-                    for (int y = 0; y < TopBottomRows; y++)
-                        SetPixel(rgb, x, y, colors[layout.Offset(Edge.Top) + x * layout.Top / Width]);
+                {
+                    Edge? edge = EdgeOf(x, y, layout);
+                    if (edge == null) continue;
 
-            if (layout.Bottom > 0)
-                for (int x = 0; x < Width; x++)
-                    for (int y = Height - TopBottomRows; y < Height; y++)
-                        SetPixel(rgb, x, y, colors[layout.Offset(Edge.Bottom) + x * layout.Bottom / Width]);
-
-            // Drawn last, so the left and right borders win the corners.
-            if (layout.Left > 0)
-                for (int y = 0; y < Height; y++)
-                    for (int x = 0; x < LeftRightColumns; x++)
-                        SetPixel(rgb, x, y, colors[layout.Offset(Edge.Left) + y * layout.Left / Height]);
-
-            if (layout.Right > 0)
-                for (int y = 0; y < Height; y++)
-                    for (int x = Width - LeftRightColumns; x < Width; x++)
-                        SetPixel(rgb, x, y, colors[layout.Offset(Edge.Right) + y * layout.Right / Height]);
+                    bool alongX = edge == Edge.Top || edge == Edge.Bottom;
+                    int zone = alongX ? x * layout.Count(edge.Value) / Width : y * layout.Count(edge.Value) / Height;
+                    SetPixel(rgb, x, y, colors[layout.Offset(edge.Value) + zone]);
+                }
+            }
 
             return rgb;
+        }
+
+        // The edge whose zones color a pixel; null when the pixel stays black.
+        private static Edge? EdgeOf(int x, int y, CaptureLayout layout)
+        {
+            // Distances as a share of the image, so the borders between edges are its diagonals.
+            // Left and right come first: they win a tie, which is what gives them the corners.
+            Edge nearest = Edge.Left;
+            double distance = (x + 0.5) / Width;
+            Consider(Edge.Right, (Width - x - 0.5) / Width, ref nearest, ref distance);
+            Consider(Edge.Top, (y + 0.5) / Height, ref nearest, ref distance);
+            Consider(Edge.Bottom, (Height - y - 0.5) / Height, ref nearest, ref distance);
+            if (layout.Count(nearest) > 0) return nearest;
+
+            // Next to an edge without zones, a border keeps its own end up to the corner.
+            if (y < TopBottomRows && layout.Top > 0) return Edge.Top;
+            if (y >= Height - TopBottomRows && layout.Bottom > 0) return Edge.Bottom;
+            if (x < LeftRightColumns && layout.Left > 0) return Edge.Left;
+            if (x >= Width - LeftRightColumns && layout.Right > 0) return Edge.Right;
+            return null;
+        }
+
+        private static void Consider(Edge edge, double distance, ref Edge nearest, ref double nearestDistance)
+        {
+            if (distance >= nearestDistance) return;
+            nearest = edge;
+            nearestDistance = distance;
         }
 
         public static string ToBase64Png(Rgb10[] colors, CaptureLayout layout)
