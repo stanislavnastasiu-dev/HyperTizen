@@ -18,6 +18,9 @@ namespace HyperTizen
         // A point that keeps failing must not hold the capture loop forever.
         private const int MaxPixelReadAttempts = 50;
 
+        // When a shortened settle reads black, wait this much more and look again before believing it.
+        private const int BlackSettleStepMs = 5;
+
         private delegate int ConditionCall(out Condition condition);
         private delegate int PositionCall(int index, int x, int y);
         private delegate int PixelCall(int index, out Color color);
@@ -42,6 +45,13 @@ namespace HyperTizen
         private Condition _condition;
         private bool _notified;
         private volatile string _lastCapture = "";
+        private volatile int _sleepMsCap;
+
+        public int SleepMsCap
+        {
+            get { return _sleepMsCap; }
+            set { _sleepMsCap = value; }
+        }
 
         [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "cs_ve_get_rgb_measure_condition")]
         private static extern int ConditionCs(out Condition condition);
@@ -182,22 +192,40 @@ namespace HyperTizen
 
                 long positioned = clock.ElapsedTicks;
 
-                if (_condition.SleepMS > 0)
+                // The device reports the settle time it wants; a cap can shorten it to go faster.
+                int cap = _sleepMsCap;
+                int sleep = cap > 0 && cap < _condition.SleepMS ? cap : _condition.SleepMS;
+                if (sleep > 0)
                 {
-                    Thread.Sleep(_condition.SleepMS);
+                    Thread.Sleep(sleep);
                 }
                 long waited = clock.ElapsedTicks;
+
+                // How much more we may wait per point to let a black-reading one settle, so a shortened
+                // settle does not turn unsettled points into false black. Zero when the full settle ran.
+                int blackBudget = _condition.SleepMS - sleep;
 
                 for (int k = 0; k < batch; k++)
                 {
                     Color color = default(Color);
                     int res = -1;
                     bool valid = false;
+                    int extraWait = 0;
                     for (int attempt = 0; attempt < MaxPixelReadAttempts && !valid; attempt++)
                     {
                         res = _api.Pixel(k, out color);
                         reads++;
                         valid = res >= 0 && color.R <= 1023 && color.G <= 1023 && color.B <= 1023;
+
+                        // A pure-black read under a shortened settle may just be unsettled: give it a
+                        // little more time and look again, up to the settle the device asked for.
+                        if (valid && color.R == 0 && color.G == 0 && color.B == 0 && extraWait < blackBudget)
+                        {
+                            int step = Math.Min(BlackSettleStepMs, blackBudget - extraWait);
+                            Thread.Sleep(step);
+                            extraWait += step;
+                            valid = false;
+                        }
                     }
 
                     if (!valid)

@@ -17,6 +17,7 @@
     const toggleState = ctx.el('home-toggle-state');
     const message = ctx.el('home-message');
     const error = ctx.el('home-error');
+    const details = ctx.el('home-details');
 
     function showSwitch(on) {
       toggleState.textContent = on ? 'On' : 'Off';
@@ -43,6 +44,8 @@
       showSwitch(!!status.enabled);
       error.hidden = !status.lastError;
       error.textContent = status.lastError || '';
+      // The capturer's own report (which measure API, point count, and per-frame timing).
+      details.textContent = status.captureDetails || '';
     }
 
     toggle.onclick = () => {

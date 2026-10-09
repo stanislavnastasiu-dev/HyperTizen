@@ -76,6 +76,7 @@ internal sealed class FakeCapturer : IScreenCapturer
     public int ExtraColors;
     public int BatchSize { get; set; }
     public string? Diagnostics { get; set; }
+    public int SleepMsCap { get; set; }
     // How many points each capture was asked for, in order.
     public ConcurrentQueue<int> PointCounts { get; } = new();
     // Colors carry the number of the capture that produced them, to tell old colors from new ones.

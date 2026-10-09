@@ -10,6 +10,7 @@
   HT.screens['settings'] = function (ctx) {
     const unlimited = ctx.el('fps-0');
     const limited = ctx.el('fps-custom');
+    const sleepCap = ctx.el('sleep-custom');
     const priorityValue = ctx.el('priority-value');
     const zonesSummary = ctx.el('zones-summary');
     const forget = ctx.el('forget-server');
@@ -24,6 +25,11 @@
       unlimited.classList.toggle('selected', limit === 0);
       limited.classList.toggle('selected', limit > 0);
       limited.textContent = limit > 0 ? String(limit) : 'Set a limit';
+    }
+
+    function showSleep(value) {
+      const ms = Number(value) || 0;
+      sleepCap.textContent = ms > 0 ? ms + ' ms' : 'Default';
     }
 
     function showPriority() {
@@ -53,6 +59,7 @@
       const client = ctx.client();
       if (!client) return;
       client.readConfig('maxFps').then(reply => showFps(reply.error ? '0' : String(reply.value)), () => {});
+      client.readConfig('captureSleepMs').then(reply => showSleep(reply.error ? '0' : String(reply.value)), () => {});
       client.readConfig('priority').then(reply => {
         priority = reply.error ? DEFAULT_PRIORITY : (Number(reply.value) || DEFAULT_PRIORITY);
         showPriority();
@@ -85,6 +92,15 @@
       max: 60,
       back: 'settings'
     });
+    sleepCap.onclick = () => ctx.router.go('number', {
+      key: 'captureSleepMs',
+      title: 'Capture settle time',
+      name: 'Milliseconds per batch',
+      hint: 'A whole number of milliseconds. 0 uses the TV’s own value; lower is faster but may read stale colors.',
+      min: 0,
+      max: 1000,
+      back: 'settings'
+    });
     ctx.el('priority-down').onclick = () => changePriority(-1);
     ctx.el('priority-up').onclick = () => changePriority(1);
     ctx.el('instance-down').onclick = () => changeInstance(-1);
@@ -114,6 +130,7 @@
         ctx.el('about').textContent = 'Service ' + (status ? status.version : 'unknown') + ' - UI ' + HT.uiVersion;
         showConfirmation(false);
         showFps('0');
+        showSleep('0');
         showPriority();
         zonesSummary.textContent = '';
         load();

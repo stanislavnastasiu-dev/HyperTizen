@@ -130,6 +130,18 @@ async function waitFor(description, condition, timeoutMs = 10000) {
   }
 }
 
+// The host rewrites its settings file in place, so a read can catch it empty or half written.
+async function readSettings(file) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (error) {
+      if (attempt >= 20) throw error;
+      await sleep(50);
+    }
+  }
+}
+
 function expect(description, actual, expected) {
   if (actual !== expected) throw new Error(description + ': expected ' + JSON.stringify(expected) + ', got ' + JSON.stringify(actual));
   console.log('ok   ' + description);
@@ -153,8 +165,15 @@ async function main() {
   const hostDll = path.join(root, 'HyperTizen.Desktop', 'bin', 'Debug', 'net10.0', 'HyperTizen.Desktop.dll');
   if (!fs.existsSync(hostDll)) throw new Error('Build the desktop host first: dotnet build HyperTizen.Desktop');
 
+  // The host's own launcher finds the right .NET by itself; the first `dotnet` on PATH may be the
+  // older one of the Tizen extension for VS Code. That extension also points DOTNET_ROOT at its
+  // own .NET, where the launcher would then look, so the host is started without it.
+  const hostLauncher = hostDll.replace(/\.dll$/, process.platform === 'win32' ? '.exe' : '');
+  const hostEnv = Object.assign({}, process.env, { HYPERTIZEN_SETTINGS: settingsFile });
+  delete hostEnv.DOTNET_ROOT;
   const startHost = () => {
-    const host = spawn('dotnet', [hostDll], { env: Object.assign({}, process.env, { HYPERTIZEN_SETTINGS: settingsFile }), stdio: 'ignore' });
+    const options = { env: hostEnv, stdio: 'ignore' };
+    const host = fs.existsSync(hostLauncher) ? spawn(hostLauncher, [], options) : spawn('dotnet', [hostDll], options);
     children.push(host);
     return host;
   };
@@ -267,7 +286,7 @@ async function main() {
   expect('plus on the top row is focused', await focused(), 'zones-top-up');
   await click('zones-top-up');
   expect('top zones shows 5', await text('zones-top-value'), '5');
-  await waitFor('the zone count is stored', async () => JSON.parse(fs.readFileSync(settingsFile, 'utf8')).zonesTop === '5');
+  await waitFor('the zone count is stored', async () => (await readSettings(settingsFile)).zonesTop === '5');
   await waitFor('the timing is shown', async () => (await text('zones-timing')).indexOf('ms per frame') > 0);
   await shot('6b-zones');
   await press('Escape');
@@ -294,7 +313,7 @@ async function main() {
   await shot('7-connecting');
   host = startHost();
   await waitFor('the UI returns to Home when the service is back', onScreen('home'), 30000);
-  const stored = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+  const stored = await readSettings(settingsFile);
   expect('settings were stored', stored.maxFps + '/' + stored.priority + '/' + stored.enabled, '10/100/true');
 
   // Forget server.
@@ -308,8 +327,8 @@ async function main() {
   expect('Cancel is focused in the confirmation', await focused(), 'forget-no');
   await click('forget-yes');
   await waitFor('forgetting opens Setup step 1', onScreen('setup-server'));
-  await waitFor('the server is removed from the settings file', async () => !('rpcServer' in JSON.parse(fs.readFileSync(settingsFile, 'utf8'))));
-  expect('capture was turned off', JSON.parse(fs.readFileSync(settingsFile, 'utf8')).enabled, 'false');
+  await waitFor('the server is removed from the settings file', async () => !('rpcServer' in await readSettings(settingsFile)));
+  expect('capture was turned off', (await readSettings(settingsFile)).enabled, 'false');
 
   // Pointing the page at a named service.
   await evaluate("document.getElementById('server-manual').click()");
@@ -319,7 +338,7 @@ async function main() {
   for (let i = 0; i < 4; i++) await click('key-del');
   for (const digit of String(hyperion.port)) await click('key-' + digit);
   await click('keypad-connect');
-  await waitFor('the server is stored again', async () => 'rpcServer' in JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
+  await waitFor('the server is stored again', async () => 'rpcServer' in await readSettings(settingsFile));
   await send('Page.navigate', { url: UI_URL + '?service=127.0.0.1' });
   await waitFor('a page with ?service= reaches Home', onScreen('home'), 30000);
   await waitFor('Home names the service it is watching', async () => (await text('tile-version')) === 'Version 1.1.4 on 127.0.0.1');
