@@ -171,7 +171,21 @@
     }
 
     if (event.keyCode === KEY_TV_BACK || event.keyCode === KEY_ESCAPE || event.keyCode === KEY_BACKSPACE) {
-      if (router.back()) event.preventDefault();
+      if (router.back()) {
+        event.preventDefault();
+        return;
+      }
+      // Nothing left to go back to: the remote's Back closes the app, as it does in any TV app.
+      // The service keeps running; only this screen goes away.
+      if (event.keyCode === KEY_TV_BACK) exitApp();
+    }
+  }
+
+  function exitApp() {
+    try {
+      if (root.tizen && root.tizen.application) root.tizen.application.getCurrentApplication().exit();
+    } catch (e) {
+      // Not on a TV, or the platform refused: stay open.
     }
   }
 

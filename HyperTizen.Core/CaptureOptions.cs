@@ -11,5 +11,8 @@ namespace HyperTizen.Core
 
         // The zones to capture. Replaced as a whole when a zone setting changes.
         public volatile CaptureLayout Layout = CaptureLayout.Default;
+
+        // Follow black bars above and below the picture, moving the top and bottom points past them.
+        public volatile bool Letterbox;
     }
 }

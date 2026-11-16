@@ -59,6 +59,15 @@ namespace HyperTizen.Core
         private volatile int _support = SupportUnknown;
         private volatile bool _paused;
 
+        // Black bars: how often the loop looks for them, and what it found. The detector and the
+        // layout built from it are shared with previews, so both are reached under _layoutGate.
+        public const int LetterboxProbeIntervalMs = 1500;
+        private readonly LetterboxDetector _letterbox = new LetterboxDetector();
+        private readonly object _layoutGate = new object();
+        private CaptureLayout _layoutBase;
+        private CaptureLayout _layout;
+        private long _lastProbeAt = -LetterboxProbeIntervalMs;
+
         public CaptureService(
             IScreenCapturer capturer,
             HyperionClient client,
@@ -166,6 +175,10 @@ namespace HyperTizen.Core
                     return false;
                 }
 
+                // Bars found before belong to whatever was on screen then.
+                ForgetLetterbox();
+                _lastProbeAt = -LetterboxProbeIntervalMs;
+
                 _client.Start();
                 _cancellation = new CancellationTokenSource();
                 CancellationToken token = _cancellation.Token;
@@ -266,13 +279,68 @@ namespace HyperTizen.Core
                 if (_support == Unsupported) return new PreviewFrame(null, null, NotSupported);
                 if (_support == SupportUnknown && !InitializeCapturer()) return new PreviewFrame(null, null, NotSupported);
 
-                CaptureLayout layout = _options.Layout;
+                CaptureLayout layout = CurrentLayout();
                 return RememberFrame(CapturePoints(layout.Points), layout);
             }
             finally
             {
                 _captureLock.Release();
             }
+        }
+
+        // The stored layout, with the top and bottom points moved past black bars when that is on.
+        // The same object comes back until something changes: the loop compares layouts by reference
+        // to tell when a frame must be captured whole.
+        private CaptureLayout CurrentLayout()
+        {
+            CaptureLayout stored = _options.Layout;
+            bool letterbox = _options.Letterbox;
+            lock (_layoutGate)
+            {
+                double inset = letterbox ? _letterbox.Inset : CaptureLayout.DefaultInset;
+                if (_layout == null || _layoutBase != stored || _layout.VerticalInset != inset)
+                {
+                    _layoutBase = stored;
+                    _layout = stored.WithVerticalInset(inset);
+                }
+                return _layout;
+            }
+        }
+
+        private void ForgetLetterbox()
+        {
+            lock (_layoutGate) _letterbox.Reset();
+        }
+
+        // Measures the probe points now and then and lets the detector decide where the bars end.
+        private async Task ProbeLetterboxIfDueAsync(CancellationToken cancellation)
+        {
+            long now = Clock.ElapsedMilliseconds;
+            if (now - _lastProbeAt < LetterboxProbeIntervalMs) return;
+            _lastProbeAt = now;
+
+            Rgb10[] colors;
+            await _captureLock.WaitAsync(cancellation).ConfigureAwait(false);
+            try
+            {
+                colors = CapturePoints(LetterboxDetector.ProbePoints);
+            }
+            finally
+            {
+                _captureLock.Release();
+            }
+
+            bool changed;
+            double inset;
+            lock (_layoutGate)
+            {
+                changed = _letterbox.Update(colors);
+                inset = _letterbox.Inset;
+            }
+            if (changed)
+                _log.Info(inset > CaptureLayout.DefaultInset
+                    ? "Black bars found: top and bottom points moved to " + Math.Round(inset * 100) + "% from the edges"
+                    : "Black bars gone: top and bottom points back at the edges");
         }
 
         // The caller holds _captureLock.
@@ -359,9 +427,12 @@ namespace HyperTizen.Core
                         continue;
                     }
 
+                    if (_options.Letterbox) await ProbeLetterboxIfDueAsync(cancellation).ConfigureAwait(false);
+                    else ForgetLetterbox();
+
                     var frameTime = Stopwatch.StartNew();
                     // Read once: the whole frame uses the layout it started with.
-                    CaptureLayout layout = _options.Layout;
+                    CaptureLayout layout = CurrentLayout();
                     // A device that measures a few points at a time waits between batches. Sending
                     // after every batch, with the other colors as they were, updates the LEDs that
                     // much more often than sending once all points are measured.

@@ -15,6 +15,7 @@ This repository is a fork of [reisxd/HyperTizen](https://github.com/reisxd/Hyper
 - **A Home screen that says what is happening.** Service, server and capture each show their state, with the last error when something is wrong.
 - **Preview.** See the colors the TV is capturing, placed where they are measured on the screen.
 - **Settings.** Frame rate limit (any value up to 60), Hyperion priority, which LED instance of the server to drive, and forgetting the server.
+- **Black bars.** With Settings, Black bars on, the TV looks for bars above and below the picture every 1.5 s and, once it has seen the same bars three times in a row, measures the top and bottom zones inside the picture instead of on the bars. Dark scenes do not move the zones; they go back to the edges once the bars are gone.
 - **Capture zones you choose.** Set how many zones the top, bottom, left and right edge have: fewer for faster updates, more for finer color, none for an edge without LEDs. The TV shows how long a frame takes with your choice.
 - **Capture on newer TVs**, and 10-bit colors scaled correctly.
 - **Reconnecting.** The service finds its server again after either side restarts, or after the server went away without a word.

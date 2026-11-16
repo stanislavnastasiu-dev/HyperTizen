@@ -1,4 +1,4 @@
-// Frame rate limit, priority, LED instance, capture zones, and forgetting the server.
+// Frame rate limit, priority, LED instance, capture zones, black bars, and forgetting the server.
 (function (root) {
   'use strict';
   const HT = root.HyperTizen = root.HyperTizen || {};
@@ -17,8 +17,15 @@
     const confirmation = ctx.el('forget-confirm');
     const cancel = ctx.el('forget-no');
     const instanceValue = ctx.el('instance-value');
+    const letterbox = ctx.el('letterbox-toggle');
     let priority = DEFAULT_PRIORITY;
     let instance = 0;
+    let letterboxOn = false;
+
+    function showLetterbox() {
+      letterbox.textContent = letterboxOn ? 'On' : 'Off';
+      letterbox.classList.toggle('selected', letterboxOn);
+    }
 
     function showFps(value) {
       const limit = Number(value) || 0;
@@ -64,6 +71,10 @@
         priority = reply.error ? DEFAULT_PRIORITY : (Number(reply.value) || DEFAULT_PRIORITY);
         showPriority();
       }, () => {});
+      client.readConfig('letterbox').then(reply => {
+        letterboxOn = !reply.error && String(reply.value) === 'true';
+        showLetterbox();
+      }, () => {});
       client.readConfig('instance').then(reply => {
         const stored = reply.error ? null : HT.capture.parseNumber(reply.value, 0, MAX_INSTANCE);
         instance = stored === null ? 0 : stored;
@@ -106,6 +117,12 @@
     ctx.el('instance-down').onclick = () => changeInstance(-1);
     ctx.el('instance-up').onclick = () => changeInstance(1);
     ctx.el('settings-zones').onclick = () => ctx.router.go('zones');
+    letterbox.onclick = () => {
+      const next = !letterboxOn;
+      if (!ctx.set('letterbox', next ? 'true' : 'false')) return;
+      letterboxOn = next;
+      showLetterbox();
+    };
 
     forget.onclick = () => {
       const status = ctx.status();
@@ -132,6 +149,8 @@
         showFps('0');
         showSleep('0');
         showPriority();
+        letterboxOn = false;
+        showLetterbox();
         zonesSummary.textContent = '';
         load();
         unlimited.focus();

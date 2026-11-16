@@ -19,6 +19,7 @@ namespace HyperTizen.Core
         private const string ZonesBottomKey = "zonesBottom";
         private const string ZonesLeftKey = "zonesLeft";
         private const string ZonesRightKey = "zonesRight";
+        private const string LetterboxKey = "letterbox";
 
         private static readonly TimeSpan PreviewTimeout = TimeSpan.FromSeconds(3);
         private static readonly string Version = ReadVersion();
@@ -56,6 +57,7 @@ namespace HyperTizen.Core
             _options.MaxFps = int.Parse(StoredOrDefault(MaxFpsKey, "0"), CultureInfo.InvariantCulture);
             _options.Priority = byte.Parse(StoredOrDefault(PriorityKey, "99"), CultureInfo.InvariantCulture);
             _options.Layout = StoredLayout();
+            _options.Letterbox = StoredOrDefault(LetterboxKey, "false") == "true";
             _capturer.SleepMsCap = int.Parse(StoredOrDefault(SleepCapKey, "0"), CultureInfo.InvariantCulture);
             await _client.SetInstanceAsync(int.Parse(StoredOrDefault(InstanceKey, "0"), CultureInfo.InvariantCulture)).ConfigureAwait(false);
 
@@ -119,6 +121,10 @@ namespace HyperTizen.Core
                     _options.MaxFps = int.Parse(value, CultureInfo.InvariantCulture);
                     break;
 
+                case LetterboxKey:
+                    _options.Letterbox = value == "true";
+                    break;
+
                 case SleepCapKey:
                     _capturer.SleepMsCap = int.Parse(value, CultureInfo.InvariantCulture);
                     break;
@@ -162,6 +168,10 @@ namespace HyperTizen.Core
 
                 case MaxFpsKey:
                     _options.MaxFps = 0;
+                    break;
+
+                case LetterboxKey:
+                    _options.Letterbox = false;
                     break;
 
                 case PriorityKey:
@@ -221,6 +231,7 @@ namespace HyperTizen.Core
             switch (key)
             {
                 case EnabledKey:
+                case LetterboxKey:
                     return value == "true" || value == "false";
 
                 case MaxFpsKey:
